@@ -1,0 +1,83 @@
+import os
+import json
+from typing import List, Dict, Any, Optional
+from pydantic import BaseModel, Field
+from langchain.chat_models import init_chat_model
+from langchain_core.output_parsers import PydanticOutputParser
+from dotenv import load_dotenv
+
+load_dotenv()
+
+class TechnicalInterviewQuestions(BaseModel):
+    clarification_questions: List[str] = Field(
+        description="A list of exactly 3 highly targeted, strategic questions designed to uncover hidden candidate skills matching identified technical gaps."
+    )
+
+def generate_targeted_interview_questions(candidate_profile: Dict[str, Any], gap_report: Dict[str, Any]) -> List[str]:
+    """
+    Analyzes the structural candidate profile and the gap analysis report,
+    generating personalized, conversational questions to extract relevant tech domain metrics.
+    """
+    print("\n[NODE] ---> Executing Targeted Interview Interviewer Node...")
+
+    llm = init_chat_model(
+        model="openai/gpt-oss-120b",
+        model_provider="groq",
+        temperature=0.4, 
+        model_kwargs={"response_format": {"type": "json_object"}}
+    )
+
+    parser = PydanticOutputParser(pydantic_object=TechnicalInterviewQuestions)
+
+    sys_instruction = (
+        "You are an elite, professional executive tech career coach. Review the candidate's profile "
+        "along side their structured gap analysis report.\n\n"
+        "Your task is to identify the most critical high-severity technical gaps (e.g., missing frameworks, architecture tools). "
+        "Generate a structured JSON response containing exactly 3 professional, direct, and conversational questions.\n"
+        f"{parser.get_format_instructions()}\n\n"
+        "Address the candidate by their name if available. Ask them if they have relevant unlisted experience, "
+        "academic project exposure, or specific variations of work that can be contextualized to fill the job requirements."
+    )
+
+    evaluation_payload = {
+        "candidate_name": candidate_profile.get("full_name", "Candidate"),
+        "identified_gaps": gap_report.get("identified_gaps", [])
+    }
+
+    response = llm.invoke([
+        ("system", sys_instruction),
+        ("user", f"Target Interview Context Variables:\n\n{json.dumps(evaluation_payload, indent=2)}")
+    ])
+
+    parsed_questions = parser.parse(response.content)
+    return parsed_questions.clarification_questions
+
+if __name__ == "__main__":
+    print("=" * 70)
+    print("STARTING RE-ALIGNED INTERACTIVE NODE VERIFICATION")
+    print("=" * 70)
+    
+    # Passing your real structured profile generated in Phase 1
+    CANDIDATE_DATA = {
+        "full_name": "UDAY SALATHIA",
+        "core_technical_skills": ["Python", "AWS Bedrock", "AWS S3", "Retrieval-Augmented Generation (RAG) systems"]
+    }
+    
+    # Passing your real gap analysis data generated in Phase 3
+    GAP_ANALYSIS_DATA = {
+        "identified_gaps": [
+            {"missing_skill": "LangGraph orchestrations and state-management", "severity": "HIGH"},
+            {"missing_skill": "FastAPI for production-tier REST endpoints", "severity": "HIGH"},
+            {"missing_skill": "Pinecone vector database design", "severity": "HIGH"}
+        ]
+    }
+    
+    try:
+        questions = generate_targeted_interview_questions(CANDIDATE_DATA, GAP_ANALYSIS_DATA)
+        print("\n" + "=" * 25 + " AGENT INTERVIEW DISCOVERY QUESTIONS " + "=" * 25)
+        for idx, question in enumerate(questions, 1):
+            print(f"\n{idx}. {question}")
+        print("\n" + "=" * 80)
+        
+    except Exception as e:
+        print(f"\n[CRITICAL ERROR] Interview Node Execution Failed: {str(e)}")
