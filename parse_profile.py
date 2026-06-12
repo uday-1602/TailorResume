@@ -20,11 +20,20 @@ class ExperienceSchema(BaseModel):
     duration: Optional[str] = Field(None, description = "The timeline, date range, or duration of the experience.")
     highlights: List[str] = Field(description = "Key responsibilities, technical tools leveraged, and direct outcomes.")
 
+class EducationDetail(BaseModel):
+    institution: str
+    degree: str
+    timeline: str
+
 class CandidateProfileSchema(BaseModel):
     full_name: str = Field(description = "The candidate's full legal name.")
+    email: str = Field(description = "The candidate's email.")
+    phone: str = Field(description = "The candidate's phone number.")
+    github_handle: str = Field(description = "The candidate's github handle.")
     core_technical_skills: List[str] = Field(description="A comprehensive, clean list of programming languages, tools, frameworks, databases, and cloud services explicitly mentioned.")
     professional_experience: List[ExperienceSchema] = Field(description="List of internships, trainee positions, or formal engineering roles.")
     engineered_projects: List[ProjectSchema] = Field(description="List of software applications, extensions, hardware integrations, or AI systems developed.")
+    education: List[EducationDetail]
 
 def extract_text_from_pdf(pdf_path: str) -> str:
     """Ingests a local PDF and extracts raw text data page by page."""
