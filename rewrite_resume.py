@@ -86,4 +86,5 @@ def execute_resume_rewrite(original_profile: Dict[str, Any], job_spec: Dict[str,
         ("user", f"Populate the template layout dynamically using exact profile items:\n\n{prompt_payload}")
     ])
 
+
     return response.content

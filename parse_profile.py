@@ -87,6 +87,7 @@ def profile_extraction(pdf_path: str) -> Dict[str, Any]:
     return parsed_output.model_dump()
 
 if __name__ == "__main__":
+    
     TARGET_RESUME = "resume.pdf"
 
     print("=" * 70)
