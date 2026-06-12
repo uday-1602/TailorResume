@@ -40,7 +40,7 @@ def extract_text_from_pdf(pdf_path: str) -> str:
 
     return combined_text
 
-def run_standalone_profile_extraction(pdf_path: str) -> Dict[str, Any]:
+def profile_extraction(pdf_path: str) -> Dict[str, Any]:
     """
     Independent execution layer for Phase 1 leveraging explicit JSON Mode 
     and native Pydantic string parsing to eliminate tool-calling exceptions.
@@ -85,7 +85,7 @@ if __name__ == "__main__":
     print("=" * 70)
 
     try:
-        profile_json = run_standalone_profile_extraction(TARGET_RESUME)
+        profile_json = profile_extraction(TARGET_RESUME)
         print(json.dumps(profile_json, indent = 2))
         print("=" * 80)
         print("\nVerification Complete! Check the output above to ensure all your core projects and skills parsed perfectly.")

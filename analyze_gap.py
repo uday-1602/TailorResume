@@ -24,7 +24,7 @@ class GapAnalysisReportSchema(BaseModel):
     identified_gaps: List[TechnicalGapSchema] = Field(description="List of critical technologies missing from the candidate's profile.")
     strategic_recommendation: str = Field(description="A high-level directive on how the candidate should tailor their resume to clear automated screening filters.")
 
-def run_standalone_gap_analysis(candidate_profile: Dict[str, Any], job_spec: Dict[str, Any]) -> Dict[str, Any]:
+def gap_analysis(candidate_profile: Dict[str, Any], job_spec: Dict[str, Any]) -> Dict[str, Any]:
     """
     Independent execution layer for Phase 3.
     Compares the candidate JSON and job specification JSON using strict JSON Mode.
@@ -122,7 +122,7 @@ if __name__ == "__main__":
     }
 
     try:
-        analysis_json = run_standalone_gap_analysis(ACTUAL_CANDIDATE_PROFILE, ACTUAL_JOB_SPECIFICATION)
+        analysis_json = gap_analysis(ACTUAL_CANDIDATE_PROFILE, ACTUAL_JOB_SPECIFICATION)
         print("\n" + "=" * 30 + " GAP ANALYSIS COMPLETE " + "=" * 30)
         print(json.dumps(analysis_json, indent=2))
         print("=" * 83)

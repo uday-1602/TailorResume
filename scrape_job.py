@@ -40,7 +40,7 @@ def scrape_raw_html_from_url(url: str) -> str:
 
     return soup.get_text(separator="\n", strip=True)
 
-def run_standalone_job_extraction(url: Optional[str] = None, fallback_file: str = "job_description.txt") -> Dict[str, Any]:
+def job_extraction(url: Optional[str] = None, fallback_file: str = "job_description.txt") -> Dict[str, Any]:
     """
     Independent execution layer for Phase 2.
     Scrapes a live URL or reads a local pasted file, enforcing JSON schema output validation.
@@ -107,7 +107,7 @@ if __name__ == "__main__":
     print("=" * 70)
 
     try:
-        job_json = run_standalone_job_extraction(url = TARGET_URL)
+        job_json = job_extraction(url = TARGET_URL)
         print("\n" + "=" * 30 + " EXTRACTION SUCCESSFUL " + "=" * 30)
         print(json.dumps(job_json, indent=2))
         print("=" * 80)
