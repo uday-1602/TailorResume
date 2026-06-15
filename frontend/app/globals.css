@@ -1,0 +1,206 @@
+@import "tailwindcss";
+
+/* ── Stitch Design Tokens ── */
+@theme inline {
+  /* Colors */
+  --color-background:               #141313;
+  --color-surface:                  #141313;
+  --color-surface-dim:              #141313;
+  --color-surface-container-lowest: #0e0e0e;
+  --color-surface-container-low:    #1c1b1b;
+  --color-surface-container:        #201f1f;
+  --color-surface-container-high:   #2a2a2a;
+  --color-surface-container-highest:#353434;
+  --color-surface-variant:          #353434;
+  --color-surface-bright:           #3a3939;
+
+  --color-primary:                  #ffffff;
+  --color-on-primary:               #2f3131;
+  --color-primary-container:        #e2e2e2;
+  --color-on-primary-container:     #636565;
+  --color-primary-fixed:            #e2e2e2;
+  --color-primary-fixed-dim:        #c6c6c7;
+  --color-on-primary-fixed:         #1a1c1c;
+  --color-on-primary-fixed-variant: #454747;
+  --color-inverse-primary:          #5d5f5f;
+
+  --color-secondary:                #c6c6cf;
+  --color-on-secondary:             #2f3037;
+  --color-secondary-container:      #45464e;
+  --color-on-secondary-container:   #b4b4bd;
+  --color-secondary-fixed:          #e2e1eb;
+  --color-secondary-fixed-dim:      #c6c6cf;
+  --color-on-secondary-fixed:       #1a1b22;
+  --color-on-secondary-fixed-variant:#45464e;
+
+  --color-tertiary:                 #ffffff;
+  --color-on-tertiary:              #2f3131;
+  --color-tertiary-container:       #e2e2e2;
+  --color-on-tertiary-container:    #636565;
+  --color-tertiary-fixed:           #e2e2e2;
+  --color-tertiary-fixed-dim:       #c6c6c7;
+  --color-on-tertiary-fixed:        #1a1c1c;
+  --color-on-tertiary-fixed-variant:#454747;
+
+  --color-on-background:            #e5e2e1;
+  --color-on-surface:               #e5e2e1;
+  --color-on-surface-variant:       #c4c7c8;
+  --color-inverse-surface:          #e5e2e1;
+  --color-inverse-on-surface:       #313030;
+
+  --color-outline:                  #8e9192;
+  --color-outline-variant:          #444748;
+
+  --color-surface-tint:             #c6c6c7;
+  --color-error:                    #ffb4ab;
+  --color-on-error:                 #690005;
+  --color-error-container:          #93000a;
+  --color-on-error-container:       #ffdad6;
+
+  /* Spacing */
+  --spacing-unit:      4px;
+  --spacing-stack-sm:  8px;
+  --spacing-stack-md:  16px;
+  --spacing-stack-lg:  32px;
+  --spacing-gutter:    24px;
+  --spacing-margin:    40px;
+  --spacing-panel-gap: 1px;
+
+  /* Fonts */
+  --font-sans:  "Geist", sans-serif;
+  --font-mono:  "JetBrains Mono", monospace;
+  --font-serif: "Geist", sans-serif;
+
+  /* Border radius — sharp corners always */
+  --radius:    0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+
+  /* Legacy shadcn compat vars (for any leftover component usage) */
+  --color-foreground:         var(--color-on-surface);
+  --color-muted:              var(--color-surface-container);
+  --color-muted-foreground:   var(--color-on-surface-variant);
+  --color-border:             var(--color-outline-variant);
+  --color-input:              var(--color-outline-variant);
+  --color-ring:               var(--color-outline);
+  --color-card:               var(--color-surface-container-low);
+  --color-card-foreground:    var(--color-on-surface);
+  --color-popover:            var(--color-surface-container);
+  --color-popover-foreground: var(--color-on-surface);
+  --color-accent:             var(--color-surface-container-high);
+  --color-accent-foreground:  var(--color-on-surface);
+  --color-destructive:        var(--color-error);
+  --color-destructive-foreground: var(--color-on-error);
+}
+
+/* ── Global Reset ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  background-color: #141313;
+  color: #e5e2e1;
+  font-family: "Geist", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Material Symbols icon style */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+  font-size: 24px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  user-select: none;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+  background: #0e0e0e;
+}
+::-webkit-scrollbar-thumb {
+  background: #444748;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #8e9192;
+}
+
+/* ── Animations ── */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes blink-cursor {
+  50% { opacity: 0; }
+}
+
+@keyframes typing-bounce {
+  0%, 100% { opacity: 0.1; transform: translateY(0); }
+  20%       { opacity: 1;   transform: translateY(-3px); }
+}
+
+@keyframes scan {
+  0%   { top: -2px; }
+  100% { top: 100%; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Utility classes */
+.animate-spin-slow {
+  animation: spin 2s linear infinite;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out both;
+}
+
+.typing-dot {
+  width: 4px;
+  height: 4px;
+  background: #c4c7c8;
+  border-radius: 9999px;
+  animation: typing-bounce 1.4s infinite both;
+}
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+/* Film grain overlay */
+.film-grain::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.025;
+  z-index: 999;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 200px;
+}
+
+/* Scanline effect */
+.scanline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.06);
+  animation: scan 6s linear infinite;
+  pointer-events: none;
+}

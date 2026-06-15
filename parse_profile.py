@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 from pypdf import PdfReader
 from langchain.chat_models import init_chat_model
 from langchain_core.output_parsers import PydanticOutputParser
+from tenacity import retry, stop_after_attempt, wait_exponential
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -24,6 +25,8 @@ class EducationDetail(BaseModel):
     institution: str
     degree: str
     timeline: str
+    cgpa: Optional[str] = Field(None, description = "The candidate's CGPA or GPA if mentioned.")
+    percentage: Optional[str] = Field(None, description = "The candidate's percentage score if mentioned.")
 
 class CandidateProfileSchema(BaseModel):
     full_name: str = Field(description = "The candidate's full legal name.")
@@ -34,6 +37,7 @@ class CandidateProfileSchema(BaseModel):
     professional_experience: List[ExperienceSchema] = Field(description="List of internships, trainee positions, or formal engineering roles.")
     engineered_projects: List[ProjectSchema] = Field(description="List of software applications, extensions, hardware integrations, or AI systems developed.")
     education: List[EducationDetail]
+    certifications: Optional[List[str]] = Field(default_factory=list, description="List of professional certifications, licenses, or courses completed.")
 
 def extract_text_from_pdf(pdf_path: str) -> str:
     """Ingests a local PDF and extracts raw text data page by page."""
@@ -78,11 +82,15 @@ def profile_extraction(pdf_path: str) -> Dict[str, Any]:
     )
 
     print("[3/3] Sending payload to model and applying Pydantic constraints...")
-    response = llm.invoke([
-        ("system", sys_instruction),
-        ("user", f"Raw Resume Text Data:\n\n{raw_text}")
-    ])
 
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+    def _invoke_with_retry():
+        return llm.invoke([
+            ("system", sys_instruction),
+            ("user", f"Raw Resume Text Data:\n\n{raw_text}")
+        ])
+
+    response = _invoke_with_retry()
     parsed_output = parser.parse(response.content)
     return parsed_output.model_dump()
 

@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 import requests
 from langchain.chat_models import init_chat_model
 from langchain_core.output_parsers import PydanticOutputParser
+from tenacity import retry, stop_after_attempt, wait_exponential
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -29,9 +30,13 @@ def scrape_raw_html_from_url(url: str) -> str:
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
 
-    response = requests.get(url, headers=headers, timeout = 10)
-    response.raise_for_status()
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+    def _fetch_with_retry():
+        resp = requests.get(url, headers=headers, timeout=10)
+        resp.raise_for_status()
+        return resp
 
+    response = _fetch_with_retry()
     soup = BeautifulSoup(response.text, "html.parser")
 
     # Remove script, style, and navigation tags to eliminate markup noise
@@ -91,11 +96,15 @@ def job_extraction(url: Optional[str] = None, fallback_file: str = "job_descript
     )
 
     print("[3/3] Emitting payload to Groq gateway and executing schema parsing...")
-    response = llm.invoke([
-        ("system", sys_instruction),
-        ("user", f"Raw Scraped Job Content:\n\n{truncated_text}")
-    ])
 
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+    def _invoke_with_retry():
+        return llm.invoke([
+            ("system", sys_instruction),
+            ("user", f"Raw Scraped Job Content:\n\n{truncated_text}")
+        ])
+
+    response = _invoke_with_retry()
     parsed_output = parser.parse(response.content)
     return parsed_output.model_dump()
 

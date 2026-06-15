@@ -4,6 +4,7 @@ from typing import List, Dict, Any
 from pydantic import BaseModel, Field
 from langchain.chat_models import init_chat_model
 from langchain_core.output_parsers import PydanticOutputParser
+from tenacity import retry, stop_after_attempt, wait_exponential
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -56,11 +57,15 @@ def gap_analysis(candidate_profile: Dict[str, Any], job_spec: Dict[str, Any]) ->
     }
 
     print("[2/2] Emitting comparison matrix payload to Groq gateway...")
-    response = llm.invoke([
-        ("system", sys_instruction),
-        ("user", f"Matrix Evlauation Target: \n\n{json.dumps(user_payload, indent = 2)}")
-    ])
 
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+    def _invoke_with_retry():
+        return llm.invoke([
+            ("system", sys_instruction),
+            ("user", f"Matrix Evaluation Target:\n\n{json.dumps(user_payload, indent=2)}")
+        ])
+
+    response = _invoke_with_retry()
     parsed_output = parser.parse(response.content)
     return parsed_output.model_dump()
 

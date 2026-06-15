@@ -1,10 +1,9 @@
 import os
 import json
-from typing import Dict, Any, List, TypedDict
+from typing import Dict, Any, List, TypedDict, Optional
 from dotenv import load_dotenv
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
-
 import tarfile
 import requests
 
@@ -23,10 +22,12 @@ class RecruiterGraphState(TypedDict):
     of this state and returns keys to update it values dynamically.
     """
     resume_path: str
+    job_url: Optional[str]          # Live job posting URL; falls back to fallback_job_file if empty
     fallback_job_file: str
     candidate_profile: Dict[str, Any]
     job_specifications: Dict[str, Any]
     gap_analysis_report: Dict[str, Any]
+    alignment_score: int            # Surfaced from gap_analysis_report for clean observability
     interview_questions: List[str]
     user_answers: Dict[str, str]
     final_latex_source: str
@@ -38,7 +39,8 @@ def profile_analyzer_node(state: RecruiterGraphState) -> Dict[str, Any]:
 
 def job_scraper_node(state: RecruiterGraphState) -> Dict[str, Any]:
     print("\n[LANGGRAPH NODE] ---> job scraper node processing...")
-    job_data = job_extraction(url=None, fallback_file=state["fallback_job_file"])
+    live_url = state.get("job_url") or None
+    job_data = job_extraction(url=live_url, fallback_file=state["fallback_job_file"])
     return {"job_specifications": job_data}
 
 def gap_analyzer_node(state: RecruiterGraphState) -> Dict[str, Any]:
@@ -47,7 +49,9 @@ def gap_analyzer_node(state: RecruiterGraphState) -> Dict[str, Any]:
         state["candidate_profile"],
         state["job_specifications"]
     )
-    return {"gap_analysis_report": report_data}
+    score = report_data.get("alignment_score_percentage", 0)
+    print(f"[GAP ANALYZER] Alignment score: {score}%")
+    return {"gap_analysis_report": report_data, "alignment_score": score}
 
 def interviewer_node(state: RecruiterGraphState) -> Dict[str, Any]:
     print("\n[LANGGRAPH NODE] ---> interviewer node processing...")
@@ -74,10 +78,12 @@ def human_input_node(state: RecruiterGraphState) -> Dict[str, Any]:
 
 def resume_rewriter_node(state: RecruiterGraphState) -> Dict[str, Any]:
     print("\n[LANGGRAPH NODE] ---> resume_rewriter_node compiling 1-page LaTeX code...")
-    
+    print(f"[REWRITER] Working with alignment score: {state.get('alignment_score', 'N/A')}%")
+
     latex_code = execute_resume_rewrite(
         original_profile=state["candidate_profile"],
         job_spec=state["job_specifications"],
+        gap_report=state["gap_analysis_report"],
         user_answers=state["user_answers"]
     )
     
@@ -96,19 +102,23 @@ def resume_rewriter_node(state: RecruiterGraphState) -> Dict[str, Any]:
     print("[COMPILER] Sending payload to the cloud compiler API (5-10 seconds)...")
     api_url = f"https://latexonline.cc/data?target={tex_filename}&command=pdflatex"
     
-    try:
+    from tenacity import retry, stop_after_attempt, wait_exponential
+
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+    def _compile_pdf():
         with open(tar_filename, "rb") as packed_file:
-            response = requests.post(api_url, files={"file": packed_file})
-            
-        if response.status_code == 200:
-            with open(pdf_filename, "wb") as pdf_file:
-                pdf_file.write(response.content)
-            print(f"\n🎉 SUCCESS! Ultra-dense 1-page '{pdf_filename}' has been generated via cloud API!")
-        else:
-            print(f"\n❌ Cloud compilation failed with status code: {response.status_code}")
-            
+            resp = requests.post(api_url, files={"file": packed_file}, timeout=30)
+            resp.raise_for_status()
+            return resp
+
+    try:
+        response = _compile_pdf()
+        with open(pdf_filename, "wb") as pdf_file:
+            pdf_file.write(response.content)
+        print(f"\nSUCCESS! Ultra-dense 1-page '{pdf_filename}' has been generated via cloud API!")
     except Exception as e:
-        print(f"\n❌ Network error during PDF compilation: {str(e)}")
+        print(f"\nERROR: Cloud compilation failed: {str(e)}")
+        raise e
         
     finally:
         # Automatically clean up the temporary workspace archive file
@@ -146,8 +156,12 @@ agent = tailor.compile(
 
 if __name__ == "__main__":
     THREAD_CONFIG = {"configurable": {"thread_id": "uday_final_one_page_session"}}
+
+    # Set job_url to a live posting URL to enable live scraping.
+    # Leave as empty string "" to fall back to job_description.txt.
     initial_state_inputs = {
         "resume_path": "resume.pdf",
+        "job_url": "",
         "fallback_job_file": "job_description.txt",
         "user_answers": {}
     }

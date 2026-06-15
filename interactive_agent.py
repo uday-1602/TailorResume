@@ -4,6 +4,7 @@ from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
 from langchain.chat_models import init_chat_model
 from langchain_core.output_parsers import PydanticOutputParser
+from tenacity import retry, stop_after_attempt, wait_exponential
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -31,12 +32,14 @@ def generate_targeted_interview_questions(candidate_profile: Dict[str, Any], gap
 
     sys_instruction = (
         "You are an elite, professional executive tech career coach. Review the candidate's profile "
-        "along side their structured gap analysis report.\n\n"
+        "alongside their structured gap analysis report.\n\n"
         "Your task is to identify the most critical high-severity technical gaps (e.g., missing frameworks, architecture tools). "
-        "Generate a structured JSON response containing exactly 3 professional, direct, and conversational questions.\n"
+        "Generate a structured JSON response containing EXACTLY 3 professional, direct, and conversational questions. "
+        "You MUST return exactly 3 questions in the list — no more, no less.\n"
         f"{parser.get_format_instructions()}\n\n"
-        "Address the candidate by their name if available. Ask them if they have relevant unlisted experience, "
-        "academic project exposure, or specific variations of work that can be contextualized to fill the job requirements."
+        "Address the candidate by their first name if available. Ask them if they have relevant unlisted experience, "
+        "academic project exposure, or specific variations of work that can be contextualized to fill the job requirements. "
+        "Keep each question concise and direct — one focused question per gap."
     )
 
     evaluation_payload = {
@@ -44,11 +47,14 @@ def generate_targeted_interview_questions(candidate_profile: Dict[str, Any], gap
         "identified_gaps": gap_report.get("identified_gaps", [])
     }
 
-    response = llm.invoke([
-        ("system", sys_instruction),
-        ("user", f"Target Interview Context Variables:\n\n{json.dumps(evaluation_payload, indent=2)}")
-    ])
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+    def _invoke_with_retry():
+        return llm.invoke([
+            ("system", sys_instruction),
+            ("user", f"Target Interview Context Variables:\n\n{json.dumps(evaluation_payload, indent=2)}")
+        ])
 
+    response = _invoke_with_retry()
     parsed_questions = parser.parse(response.content)
     return parsed_questions.clarification_questions
 
