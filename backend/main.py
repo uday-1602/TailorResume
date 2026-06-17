@@ -53,10 +53,11 @@ JOBS_DIR.mkdir(exist_ok=True)
 
 
 class JobRecord:
-    def __init__(self, job_id: str, resume_path: str, job_file: str):
+    def __init__(self, job_id: str, resume_path: str, job_file: str, job_url: Optional[str] = None):
         self.job_id = job_id
         self.resume_path = resume_path
         self.job_file = job_file
+        self.job_url = job_url
         self.thread_config = {"configurable": {"thread_id": job_id}}
 
         self.events: list[dict] = []          # SSE event queue
@@ -85,7 +86,7 @@ def _run_pipeline(record: JobRecord):
     try:
         initial_state: Dict[str, Any] = {
             "resume_path": record.resume_path,
-            "job_url": "",
+            "job_url": record.job_url or "",
             "fallback_job_file": record.job_file,
             "user_answers": {},
         }
@@ -139,7 +140,7 @@ def _run_pipeline(record: JobRecord):
 
         # --- Done ---
         snapshot = agent.get_state(record.thread_config)
-        pdf_path = ROOT / "tailored_resume.pdf"
+        pdf_path = Path(record.resume_path).parent / "tailored_resume.pdf"
         if pdf_path.exists():
             dest = JOBS_DIR / f"{record.job_id}.pdf"
             shutil.copy(pdf_path, dest)
@@ -206,7 +207,12 @@ async def run_pipeline(
     else:
         raise HTTPException(status_code=400, detail="Provide either job_url or job_text")
 
-    record = JobRecord(job_id=job_id, resume_path=resume_path, job_file=job_file)
+    record = JobRecord(
+        job_id=job_id,
+        resume_path=resume_path,
+        job_file=job_file,
+        job_url=job_url.strip() if job_url else None
+    )
 
     with _JOBS_LOCK:
         _JOBS[job_id] = record
@@ -276,7 +282,7 @@ async def submit_answers(job_id: str, payload: AnswersPayload):
 
 
 @app.get("/api/download/{job_id}")
-async def download_pdf(job_id: str, download: Optional[str] = None):
+async def download_pdf(job_id: str, download: bool = False):
     """Serve the compiled tailored_resume.pdf for a given job."""
     with _JOBS_LOCK:
         record = _JOBS.get(job_id)
@@ -285,7 +291,7 @@ async def download_pdf(job_id: str, download: Optional[str] = None):
     if not record.pdf_path or not os.path.exists(record.pdf_path):
         raise HTTPException(status_code=404, detail="PDF not yet generated")
 
-    disposition = "attachment" if download == "true" else "inline"
+    disposition = "attachment" if download else "inline"
     return FileResponse(
         record.pdf_path,
         media_type="application/pdf",

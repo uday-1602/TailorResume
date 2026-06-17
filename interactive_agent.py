@@ -22,7 +22,7 @@ def generate_targeted_interview_questions(candidate_profile: Dict[str, Any], gap
     print("\n[NODE] ---> Executing Targeted Interview Interviewer Node...")
 
     llm = init_chat_model(
-        model="openai/gpt-oss-120b",
+        model="llama-3.3-70b-versatile",
         model_provider="groq",
         temperature=0.4, 
         model_kwargs={"response_format": {"type": "json_object"}}

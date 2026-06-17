@@ -22,10 +22,10 @@ def execute_resume_rewrite(original_profile: Dict[str, Any], job_spec: Dict[str,
         max_tokens=4096
     )
 
-    full_name = original_profile.get("full_name", "CANDIDATE NAME").strip()
-    email = original_profile.get("email", "").strip()
-    phone = original_profile.get("phone", "").strip()
-    github = original_profile.get("github_handle", "").strip()
+    full_name = (original_profile.get("full_name") or "CANDIDATE NAME").strip()
+    email = (original_profile.get("email") or "").strip()
+    phone = (original_profile.get("phone") or "").strip()
+    github = (original_profile.get("github_handle") or "").strip()
 
     github_username = github.split("/")[-1] if github and github.lower() not in ("n/a", "", "none") else ""
     email_escaped = email.replace("_", "\\_") if email else ""
@@ -88,12 +88,11 @@ RULE 1 — PROFESSIONAL SUMMARY (2 sentences, not generic):
     Sentence 2: Proven ability to [key capability from experience highlights or projects], with hands-on exposure to [1-2 specific tools from job spec found in their profile or user answers].
   IMPORTANT:
     - Be specific to this candidate and this job. Do NOT write generic filler.
-    - Check the candidate's actual graduation date and experience duration. Since this candidate is a B.Tech student (graduating in 2027) with less than a year of internship experience (Jan 2026 - Present), DO NOT state "1+ years of experience" or fabricate any years of professional experience. Instead, describe them using terms like "hands-on internship and academic experience" or as a "Project Trainee Intern".
+    - Check the candidate's actual graduation date and experience duration. DO NOT state experience duration (e.g. "X+ years of experience") or fabricate any years of professional experience that is not supported by the candidate's profile data. Instead, describe their experience level accurately using terms like "hands-on internship and academic experience" or their actual roles.
   End the summary block with a single \\ (not \\\\).
 
 RULE 2 — TECHNICAL SKILLS:
-  Organize into 4-5 bold subcategories (e.g., \\textbf{{Languages:}}, \\textbf{{AI/ML:}}, \
-\\textbf{{Cloud:}}, \\textbf{{Databases:}}, \\textbf{{Web \\& Tools:}}).
+  Organize into 4-5 bold subcategories (e.g., \\textbf{{Languages:}}, \\textbf{{AI/ML:}}, \\textbf{{Cloud:}}, \\textbf{{Databases:}}, \\textbf{{Web \\& Tools:}}).
   Each subcategory on its own line ending with \\\\
   Pull skills from core_technical_skills AND weave in preferred_or_bonus_skills the candidate has exposure.
 
@@ -107,7 +106,7 @@ RULE 3 — PROFESSIONAL EXPERIENCE:
       \\item bullet
     \\end{{itemize}}
   Use 2-3 bullets per entry. Each bullet must be under 20 words, action-verb first.
-  Weave in required job skills ONLY where the candidate genuinely has exposure based on their highlights or user answers. Do NOT include skills (like FastAPI) that the candidate lacks.
+  Weave in required job skills ONLY where the candidate genuinely has exposure based on their highlights or user answers. Do NOT include skills that the candidate lacks.
 
 RULE 4 — PROJECTS (2 to 3 entries, most relevant first):
   Select projects with the HIGHEST overlap to the target job's required skills. Omit unrelated ones.
@@ -118,8 +117,7 @@ RULE 4 — PROJECTS (2 to 3 entries, most relevant first):
       \\item bullet
     \\end{{itemize}}
   Use 2-3 bullets per project. Each bullet under 20 words, action-verb first.
-  DO NOT fabricate metrics, percentages, star counts, or document volumes not present in the source data. \
-Describe impact qualitatively instead (e.g., "enabling fast semantic retrieval", "streamlining knowledge access").
+  DO NOT fabricate metrics, percentages, star counts, or document volumes not present in the source data. Describe impact qualitatively instead (e.g., "enabling fast semantic retrieval", "streamlining knowledge access").
 
 RULE 5 — CERTIFICATIONS:
   If certifications exist in the profile data OR were mentioned in user answers, include:
@@ -142,18 +140,16 @@ RULE 7 — LATEX COMPLIANCE (CRITICAL):
   - Every section must open with \\section*{{...}} and contain valid LaTeX content.
   - Every \\begin{{itemize}} must have a matching \\end{{itemize}}.
   - The last line must be \\end{{document}} with nothing after it.
-  - Do NOT use em-dashes (—), curly quotes (""), or any non-ASCII character directly. \
-Use LaTeX equivalents: -- for en-dash, --- for em-dash, \\textquoteleft etc.
+  - Do NOT use em-dashes (—), curly quotes (""), or any non-ASCII character directly. Use LaTeX equivalents: -- for en-dash, --- for em-dash, \\textquoteleft etc.
 
 RULE 8 — ONE PAGE GUARANTEE:
   The entire document MUST fit on exactly one page when compiled.
-  If you are running long: reduce bullets to 2 per block, trim bullet word count, drop the least \
-relevant project, or shorten the skills section.
+  If you are running long: reduce bullets to 2 per block, trim bullet word count, drop the least relevant project, or shorten the skills section.
 
 RULE 9 — TRUTHFULNESS & SKILL INTEGRITY (MANDATORY):
   - Do NOT assume, fabricate, or hallucinate skills that are not explicitly in the candidate's profile data or conversational answers.
-  - Specifically: The candidate has NEVER used FastAPI and has not confirmed exposure to it. Therefore, you MUST NOT include FastAPI anywhere on the resume (not in the professional summary, skills list, experience, or projects). 
-  - Instead, focus on the skills they actually possess, such as Python, Flask, LangGraph, AWS Bedrock, AWS S3, and Pinecone.
+  - You MUST NOT include any skills or technologies anywhere on the resume (not in the professional summary, skills list, experience, or projects) if they are missing from the candidate's profile or have not been confirmed in the conversational answers.
+  - Instead, focus exclusively on the skills they actually possess or have confirmed exposure to.
 
 =====================================================================
 PART 3 — SELF-VALIDATION CHECKLIST (run before outputting)
@@ -169,7 +165,7 @@ Before outputting, verify:
 [ ] Education has CGPA/percentage appended
 [ ] All & escaped as \\& and all % escaped as \\%
 [ ] \\end{{document}} is the very last line
-[ ] Absolutely NO mentions of FastAPI (since the candidate has never used or confirmed it)
+[ ] Absolutely NO mentions of skills or technologies not present in the candidate profile or user answers
 [ ] Only skills and technologies present in the candidate profile or user answers are included (no fabrication)
 """
 

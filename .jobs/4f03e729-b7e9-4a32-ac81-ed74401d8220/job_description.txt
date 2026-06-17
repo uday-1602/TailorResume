@@ -1,0 +1,16 @@
+Position: Senior AI & Platform Engineer
+Company: CloudScale Solutions
+
+We are looking for a Senior AI & Platform Engineer to join our core architecture team. In this role, you will scale our enterprise data capabilities and transition our workflows into orchestrable intelligent systems.
+
+Required Hard Skills:
+- Advanced Python systems development.
+- Hands-on experience with LangGraph orchestrations and state-management.
+- Deep architectural implementation of AWS Bedrock Knowledge Bases and vector indexing.
+- Experience building production-tier REST endpoints using FastAPI.
+- Relational and vector database design using PostgreSQL and Pinecone.
+
+Core Responsibilities:
+- Transition legacy multi-step prompts into robust, state-based Multi-Agent pipelines.
+- Build automated document indexing structures using cloud native object storage.
+- Optimize semantic search routing strategies to reduce LLM latency and token bloat.

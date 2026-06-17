@@ -61,7 +61,7 @@ export function UploadStep({
   const handleDragLeave = () => setIsDragging(false);
 
   return (
-    <div className="w-full max-w-7xl mx-auto h-[calc(100vh-8rem)] flex flex-col border border-[#444748] bg-[#0e0e0e] overflow-hidden animate-fade-in">
+    <div className="w-[calc(100%-2rem)] md:w-[calc(100%-4rem)] max-w-7xl mx-auto h-[calc(100vh-8rem)] flex flex-col border border-[#444748] bg-[#0e0e0e] overflow-hidden animate-fade-in">
       {/* Split Panel */}
       <div className="flex-grow flex overflow-hidden">
         {/* LEFT — Resume Upload */}

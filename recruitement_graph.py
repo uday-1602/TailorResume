@@ -87,20 +87,27 @@ def resume_rewriter_node(state: RecruiterGraphState) -> Dict[str, Any]:
         user_answers=state["user_answers"]
     )
     
-    tex_filename = "tailored_resume.tex"
-    tar_filename = "payload.tar.bz2"
-    pdf_filename = "tailored_resume.pdf"
+    resume_dir = os.path.dirname(state["resume_path"])
+    tex_filename = os.path.join(resume_dir, "tailored_resume.tex")
+    tar_filename = os.path.join(resume_dir, "payload.tar.bz2")
+    pdf_filename = os.path.join(resume_dir, "tailored_resume.pdf")
     
+    if os.path.exists(pdf_filename):
+        try:
+            os.remove(pdf_filename)
+        except Exception:
+            pass
+            
     with open(tex_filename, "w", encoding="utf-8") as f:
         f.write(latex_code)
     print(f"[FILE OUT] LaTeX source code written to: {os.path.abspath(tex_filename)}")
    
     print("\n[COMPILER] Packing LaTeX file into a compressed stream...")
     with tarfile.open(tar_filename, "w:bz2") as tar:
-        tar.add(tex_filename)
+        tar.add(tex_filename, arcname="tailored_resume.tex")
 
     print("[COMPILER] Sending payload to the cloud compiler API (5-10 seconds)...")
-    api_url = f"https://latexonline.cc/data?target={tex_filename}&command=pdflatex"
+    api_url = "https://latexonline.cc/data?target=tailored_resume.tex&command=pdflatex"
     
     from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -183,7 +190,7 @@ if __name__ == "__main__":
             user_input = input(">>> Your Answer: ").strip()
             if not user_input:
                 user_input = "Omit parameter."
-            collected_responses[f"q{idx}"] = user_input
+            collected_responses[question] = user_input
             
         print("\n" + "!" * 77)
         

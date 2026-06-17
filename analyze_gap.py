@@ -32,7 +32,7 @@ def gap_analysis(candidate_profile: Dict[str, Any], job_spec: Dict[str, Any]) ->
     """
     print(f"[1/2] Initializing Gap Analyzer with explicit native JSON Mode formatting...")
     llm = init_chat_model(
-        model="openai/gpt-oss-120b",
+        model="llama-3.3-70b-versatile",
         model_provider="groq",
         temperature=0,
         model_kwargs={"response_format": {"type": "json_object"}}

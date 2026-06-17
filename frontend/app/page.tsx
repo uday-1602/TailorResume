@@ -192,6 +192,38 @@ export default function Home() {
     }
   }, [resumeFile, jobTab, jobUrl, jobText, selectedTemplate, connectSSE]);
 
+  const handleReset = useCallback(() => {
+    const hasProgress =
+      step !== "upload" ||
+      resumeFile !== null ||
+      jobUrl.trim().length > 0 ||
+      jobText.trim().length > 0;
+
+    if (hasProgress) {
+      const confirmReset = window.confirm(
+        "Wait! Do you want to lose your resume tailoring progress and start all over? (The AI will miss you!)"
+      );
+      if (!confirmReset) return;
+    }
+
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+    setStep("upload");
+    setNodes(INITIAL_NODES);
+    setStatusMessage("");
+    setJobId(null);
+    setShowChatbot(false);
+    setInterviewQuestions([]);
+    setResumeFile(null);
+    setJobUrl("");
+    setJobText("");
+    setJobTab("text");
+    setSelectedTemplate("default");
+    toast.info("Process terminated. App reset to start.");
+  }, [step, resumeFile, jobUrl, jobText]);
+
   useEffect(() => {
     return () => {
       eventSourceRef.current?.close();
@@ -207,7 +239,10 @@ export default function Home() {
       {/* ── Header ── */}
       <header className="w-full border-b border-[#444748] bg-[#141313] flex justify-between items-center px-10 h-16 shrink-0 z-50">
         {/* Logo + wordmark */}
-        <div className="flex items-center gap-3">
+        <div
+          onClick={handleReset}
+          className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity select-none"
+        >
           {/* Square logo SVG */}
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <rect x="4" y="4" width="6" height="6" fill="white"/>
@@ -270,7 +305,7 @@ export default function Home() {
           )}
 
           {step === "template" && (
-            <div key="template" className="w-full">
+            <div key="template" className="w-full flex justify-center">
               <TemplateStep
                 selectedTemplate={selectedTemplate}
                 onSelectTemplate={setSelectedTemplate}
@@ -295,7 +330,7 @@ export default function Home() {
           )}
 
           {step === "result" && (
-            <div key="result" className="w-full">
+            <div key="result" className="w-full flex justify-center">
               <ResultStep jobId={jobId} onReIterate={() => {}} />
             </div>
           )}
@@ -306,9 +341,6 @@ export default function Home() {
       <footer className="w-full border-t border-[#444748] bg-[#141313] flex justify-between items-center px-10 py-4 shrink-0">
         <span className="font-['JetBrains_Mono'] text-[12px] text-white font-bold uppercase">
           TailorResume
-        </span>
-        <span className="font-['JetBrains_Mono'] text-[12px] text-[#c4c7c8]">
-          Powered by LangGraph · Groq · LaTeX Online
         </span>
         <span className="font-['JetBrains_Mono'] text-[12px] text-[#8e9192]">
           TailorResume © 2026

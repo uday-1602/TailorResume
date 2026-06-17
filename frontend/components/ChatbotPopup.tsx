@@ -32,10 +32,20 @@ export function ChatbotPopup({ questions, onComplete }: ChatbotPopupProps) {
     const timer = setTimeout(() => {
       setMessages([{ role: "bot", text: questions[0] }]);
       setIsBotTyping(false);
-      inputRef.current?.focus();
     }, 900);
     return () => clearTimeout(timer);
   }, [questions]);
+
+  // Keep input focused whenever bot stops typing and input gets enabled
+  useEffect(() => {
+    if (!isBotTyping) {
+      // Small timeout to guarantee DOM is updated and input is fully enabled
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [isBotTyping]);
 
   useEffect(() => {
     scrollDown();
@@ -46,7 +56,7 @@ export function ChatbotPopup({ questions, onComplete }: ChatbotPopupProps) {
     if (!val || isBotTyping) return;
 
     const answer = val === "skip" ? "" : val;
-    const newAnswers = { ...answers, [currentQ]: answer };
+    const newAnswers = { ...answers, [questions[currentQ]]: answer };
     setAnswers(newAnswers);
 
     setMessages((prev) => [...prev, { role: "user", text: val }]);
@@ -62,7 +72,6 @@ export function ChatbotPopup({ questions, onComplete }: ChatbotPopupProps) {
         ]);
         setIsBotTyping(false);
         setCurrentQ(nextQ);
-        inputRef.current?.focus();
       }, 1200);
     } else {
       // All answered
@@ -125,12 +134,11 @@ export function ChatbotPopup({ questions, onComplete }: ChatbotPopupProps) {
           </div>
         </div>
 
-        {/* Chat area */}
-        <div className="flex-grow overflow-y-auto p-6 space-y-5 h-[380px]">
+        <div className="flex-grow overflow-y-auto p-6 flex flex-col gap-6 h-[380px]">
           {messages.map((msg, i) => (
             <div
               key={i}
-              className={`flex items-start gap-3 ${
+              className={`w-full flex items-start gap-3 ${
                 msg.role === "user" ? "flex-row-reverse" : ""
               }`}
             >
@@ -162,7 +170,7 @@ export function ChatbotPopup({ questions, onComplete }: ChatbotPopupProps) {
 
           {/* Bot typing indicator */}
           {isBotTyping && (
-            <div className="flex items-start gap-3">
+            <div className="w-full flex items-start gap-3">
               <div className="w-7 h-7 shrink-0 bg-[#353434] flex items-center justify-center">
                 <span
                   className="material-symbols-outlined text-white text-[16px]"

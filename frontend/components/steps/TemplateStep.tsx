@@ -48,23 +48,23 @@ export function TemplateStep({
   onBack,
 }: TemplateStepProps) {
   return (
-    <div className="w-full max-w-7xl mx-auto flex flex-col animate-fade-in">
+    <div className="w-[calc(100%-2rem)] md:w-[calc(100%-4rem)] max-w-7xl mx-auto h-[calc(100vh-12rem)] min-h-[500px] flex flex-col justify-between animate-fade-in">
       {/* Heading */}
-      <div className="mb-10">
-        <h1 className="font-['Geist'] text-[48px] font-bold leading-[1.1] tracking-[-0.04em] text-white mb-3">
+      <div className="mb-6 shrink-0">
+        <h1 className="font-['Geist'] text-[32px] sm:text-[40px] lg:text-[48px] font-bold leading-[1.1] tracking-[-0.04em] text-white mb-2">
           Choose a Resume Layout
         </h1>
-        <p className="font-['Geist'] text-[16px] text-[#c4c7c8]">
+        <p className="font-['Geist'] text-[14px] sm:text-[16px] text-[#c4c7c8]">
           Select a design template for your tailored resume.
         </p>
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-4 gap-6 mb-12">
+      <div className="grid grid-cols-4 gap-6 flex-grow min-h-0 mb-6 max-h-[480px]">
         {/* Default — selectable */}
         <div
           onClick={() => onSelectTemplate("default")}
-          className={`border-2 flex flex-col h-[480px] relative cursor-pointer transition-all
+          className={`border-2 flex flex-col h-full min-h-0 relative cursor-pointer transition-all
             ${selectedTemplate === "default"
               ? "border-white bg-[#1c1b1b]"
               : "border-[#444748] bg-[#1c1b1b] hover:border-white"
@@ -79,11 +79,11 @@ export function TemplateStep({
             </div>
           )}
           {/* Preview area */}
-          <div className="flex-grow bg-[#201f1f] flex items-center justify-center border-b border-[#444748]">
+          <div className="flex-grow bg-[#201f1f] flex items-center justify-center border-b border-[#444748] min-h-0">
             <DefaultPreview />
           </div>
           {/* Info */}
-          <div className="p-4 bg-[#141313] flex flex-col gap-2">
+          <div className="p-4 bg-[#141313] flex flex-col gap-2 shrink-0">
             <div className="flex justify-between items-start">
               <h3 className="font-['Geist'] text-[20px] font-semibold text-white">
                 Default Layout
@@ -99,12 +99,12 @@ export function TemplateStep({
         {LOCKED_CARDS.map((name) => (
           <div
             key={name}
-            className="border border-[#444748] bg-[#1c1b1b] flex flex-col h-[480px] relative opacity-50 cursor-not-allowed grayscale"
+            className="border border-[#444748] bg-[#1c1b1b] flex flex-col h-full min-h-0 relative opacity-50 cursor-not-allowed grayscale"
           >
-            <div className="flex-grow bg-[#201f1f] flex items-center justify-center border-b border-[#444748]">
+            <div className="flex-grow bg-[#201f1f] flex items-center justify-center border-b border-[#444748] min-h-0">
               <LockedPreview name={name} />
             </div>
-            <div className="p-4 bg-[#141313] flex flex-col gap-2">
+            <div className="p-4 bg-[#141313] flex flex-col gap-2 shrink-0">
               <h3 className="font-['Geist'] text-[20px] font-semibold text-[#c4c7c8]">
                 {name}
               </h3>
@@ -117,7 +117,7 @@ export function TemplateStep({
       </div>
 
       {/* Navigation */}
-      <div className="flex justify-between items-center border-t border-[#444748] pt-8">
+      <div className="flex justify-between items-center border-t border-[#444748] pt-6 shrink-0">
         <button
           onClick={onBack}
           className="h-12 px-8 border border-white text-white font-['JetBrains_Mono'] text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-white hover:text-[#141313] transition-all"

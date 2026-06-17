@@ -30,9 +30,9 @@ class EducationDetail(BaseModel):
 
 class CandidateProfileSchema(BaseModel):
     full_name: str = Field(description = "The candidate's full legal name.")
-    email: str = Field(description = "The candidate's email.")
-    phone: str = Field(description = "The candidate's phone number.")
-    github_handle: str = Field(description = "The candidate's github handle.")
+    email: Optional[str] = Field(None, description = "The candidate's email.")
+    phone: Optional[str] = Field(None, description = "The candidate's phone number.")
+    github_handle: Optional[str] = Field(None, description = "The candidate's github handle.")
     core_technical_skills: List[str] = Field(description="A comprehensive, clean list of programming languages, tools, frameworks, databases, and cloud services explicitly mentioned.")
     professional_experience: List[ExperienceSchema] = Field(description="List of internships, trainee positions, or formal engineering roles.")
     engineered_projects: List[ProjectSchema] = Field(description="List of software applications, extensions, hardware integrations, or AI systems developed.")
@@ -63,7 +63,7 @@ def profile_extraction(pdf_path: str) -> Dict[str, Any]:
 
     print(f"Initializing AI model with strict structured output mapping...")
     llm = init_chat_model(
-        model = "openai/gpt-oss-120b", 
+        model="llama-3.3-70b-versatile", 
         model_provider="groq", 
         temperature = 0, 
         model_kwargs={"response_format": {"type": "json_object"}}
