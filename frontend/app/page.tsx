@@ -9,6 +9,8 @@ import { ProcessingStep, PipelineNode } from "@/components/steps/ProcessingStep"
 import { ResultStep } from "@/components/steps/ResultStep";
 import { ChatbotPopup } from "@/components/ChatbotPopup";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+
 type Step = "upload" | "template" | "processing" | "result";
 
 const INITIAL_NODES: PipelineNode[] = [
@@ -86,7 +88,7 @@ export default function Home() {
 
   const connectSSE = useCallback(
     (id: string) => {
-      const es = new EventSource(`http://127.0.0.1:8000/api/status/${id}`);
+      const es = new EventSource(`${API_BASE_URL}/api/status/${id}`);
       eventSourceRef.current = es;
 
       es.onmessage = (event) => {
@@ -142,7 +144,7 @@ export default function Home() {
       setStatusMessage("Rewriting your resume...");
 
       try {
-        await fetch(`http://127.0.0.1:8000/api/answers/${jobId}`, {
+        await fetch(`${API_BASE_URL}/api/answers/${jobId}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ answers }),
@@ -171,7 +173,7 @@ export default function Home() {
     formData.append("template", selectedTemplate);
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/run", {
+      const res = await fetch(`${API_BASE_URL}/api/run`, {
         method: "POST",
         body: formData,
       });

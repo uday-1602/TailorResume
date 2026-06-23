@@ -178,8 +178,10 @@ export function ResultStep({ jobId, onReIterate }: ResultStepProps) {
   const [pdfjsLoaded, setPdfjsLoaded] = useState(false);
   const [zoom, setZoom] = useState(1.0);
 
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+
   const downloadUrl = jobId
-    ? `http://127.0.0.1:8000/api/download/${jobId}`
+    ? `${API_BASE_URL}/api/download/${jobId}`
     : null;
 
   useEffect(() => {
