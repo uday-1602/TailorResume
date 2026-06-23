@@ -18,6 +18,8 @@ export function ChatbotPopup({ questions, onComplete }: ChatbotPopupProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isBotTyping, setIsBotTyping] = useState(true);
+  const [isWaitingForElaboration, setIsWaitingForElaboration] = useState(false);
+  const [lastUserMessage, setLastUserMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -51,16 +53,48 @@ export function ChatbotPopup({ questions, onComplete }: ChatbotPopupProps) {
     scrollDown();
   }, [messages, isBotTyping, scrollDown]);
 
+  const isProjectRelated = (text: string): boolean => {
+    const keywords = ["project", "developed", "built", "implemented", "designed", "created", "worked on", "system", "app", "application", "platform", "tool", "dashboard", "database", "pipeline"];
+    const lower = text.toLowerCase();
+    return keywords.some(kw => lower.includes(kw));
+  };
+
   const handleSend = useCallback(() => {
     const val = inputValue.trim();
     if (!val || isBotTyping) return;
 
-    const answer = val === "skip" ? "" : val;
-    const newAnswers = { ...answers, [questions[currentQ]]: answer };
-    setAnswers(newAnswers);
-
     setMessages((prev) => [...prev, { role: "user", text: val }]);
     setInputValue("");
+
+    const isProject = isProjectRelated(val);
+
+    if (isProject && !isWaitingForElaboration) {
+      setIsBotTyping(true);
+      setLastUserMessage(val);
+      setIsWaitingForElaboration(true);
+
+      setTimeout(() => {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "bot",
+            text: "That sounds like a great project! Could you please elaborate on it? (Tell me about the core technologies you used, your specific role, and any key achievements or metrics)",
+          },
+        ]);
+        setIsBotTyping(false);
+      }, 1000);
+      return;
+    }
+
+    let finalAnswer = val === "skip" ? "" : val;
+    if (isWaitingForElaboration) {
+      finalAnswer = `${lastUserMessage} [Elaboration]: ${val}`;
+      setIsWaitingForElaboration(false);
+      setLastUserMessage("");
+    }
+
+    const newAnswers = { ...answers, [questions[currentQ]]: finalAnswer };
+    setAnswers(newAnswers);
 
     const nextQ = currentQ + 1;
     if (nextQ < questions.length) {
@@ -87,7 +121,7 @@ export function ChatbotPopup({ questions, onComplete }: ChatbotPopupProps) {
         setTimeout(() => onComplete(newAnswers), 1500);
       }, 800);
     }
-  }, [inputValue, isBotTyping, answers, currentQ, questions, onComplete]);
+  }, [inputValue, isBotTyping, answers, currentQ, questions, onComplete, isWaitingForElaboration, lastUserMessage]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") handleSend();

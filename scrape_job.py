@@ -43,7 +43,30 @@ def scrape_raw_html_from_url(url: str) -> str:
     for element in soup(["script", "style", "nav", "footer", "header", "aside"]):
         element.extract()
 
-    return soup.get_text(separator="\n", strip=True)
+    text = soup.get_text(separator="\n", strip=True)
+    lowered = text.lower()
+    
+    # Common bot-detection or redirection keywords
+    blocked_signatures = [
+        "please click here if you are not redirected",
+        "enablejs",
+        "captcha",
+        "robot check",
+        "hcaptcha",
+        "recaptcha",
+        "checking your browser",
+        "access denied",
+        "security checkpoint",
+        "pardon our interruption"
+    ]
+    is_blocked = any(sig in lowered for sig in blocked_signatures)
+    
+    if len(text) < 400 or is_blocked:
+        raise ValueError(
+            "Live URL returned a redirect, noscript, or anti-bot challenge page instead of job details."
+        )
+        
+    return text
 
 def job_extraction(url: Optional[str] = None, fallback_file: str = "job_description.txt") -> Dict[str, Any]:
     """
@@ -71,7 +94,15 @@ def job_extraction(url: Optional[str] = None, fallback_file: str = "job_descript
         
         print(f"\n[1/3] Reading manually staged text data from: {fallback_file}...")
         with open(fallback_file, "r", encoding = "utf-8") as f:
-            raw_job_text = f.read()
+            content = f.read().strip()
+            
+        # Check if the fallback content is just a URL itself
+        if content.startswith(("http://", "https://")) or (len(content.split()) == 1 and "." in content):
+            raise ValueError(
+                "Live URL scraping failed due to redirection/anti-bot protection, "
+                "and no fallback job description was provided. Please copy and paste the job description text manually."
+            )
+        raw_job_text = content
         
     truncated_text = raw_job_text[:12000]
 

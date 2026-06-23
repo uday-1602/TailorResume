@@ -44,12 +44,13 @@ def extract_text_from_pdf(pdf_path: str) -> str:
     if not os.path.exists(pdf_path):
         raise FileNotFoundError(f"Target document asset not found at: {pdf_path}")
     
-    reader = PdfReader(pdf_path)
     combined_text = ""
-    for page in reader.pages:
-        text = page.extract_text()
-        if text:
-            combined_text += text
+    with open(pdf_path, "rb") as f:
+        reader = PdfReader(f)
+        for page in reader.pages:
+            text = page.extract_text()
+            if text:
+                combined_text += text
 
     return combined_text
 

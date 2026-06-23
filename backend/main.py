@@ -6,28 +6,33 @@ Run from TailorResume/ root:
     uvicorn backend.main:app --reload --port 8000
 """
 
+import sys
+from pathlib import Path
+
+# Make parent directory importable so we can import the graph modules and backend package
+ROOT = Path(__file__).parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from dotenv import load_dotenv
+load_dotenv(ROOT / ".env")
+
 import asyncio
 import json
 import os
 import shutil
-import sys
 import threading
 import uuid
-from pathlib import Path
 from typing import Any, Dict, Optional
 
 from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel
-
-# ---------------------------------------------------------------------------
-# Make parent directory importable so we can import the graph modules
-# ---------------------------------------------------------------------------
-ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(ROOT))
+from backend.s3_storage import s3_storage
 
 from recruitement_graph import agent, RecruiterGraphState  # noqa: E402
+
 
 # ---------------------------------------------------------------------------
 # App setup
@@ -53,11 +58,12 @@ JOBS_DIR.mkdir(exist_ok=True)
 
 
 class JobRecord:
-    def __init__(self, job_id: str, resume_path: str, job_file: str, job_url: Optional[str] = None):
+    def __init__(self, job_id: str, resume_path: str, job_file: str, job_url: Optional[str] = None, template: str = "default"):
         self.job_id = job_id
         self.resume_path = resume_path
         self.job_file = job_file
         self.job_url = job_url
+        self.template = template
         self.thread_config = {"configurable": {"thread_id": job_id}}
 
         self.events: list[dict] = []          # SSE event queue
@@ -69,6 +75,7 @@ class JobRecord:
         self.user_answers: dict = {}
 
         self.pdf_path: Optional[str] = None
+        self.s3_key: Optional[str] = None
         self.error: Optional[str] = None
         self.done = False
 
@@ -83,11 +90,13 @@ class JobRecord:
 # Background pipeline runner (runs in a thread so it doesn't block async loop)
 # ---------------------------------------------------------------------------
 def _run_pipeline(record: JobRecord):
+    current_node = "job_scraper"
     try:
         initial_state: Dict[str, Any] = {
             "resume_path": record.resume_path,
             "job_url": record.job_url or "",
             "fallback_job_file": record.job_file,
+            "template": record.template,
             "user_answers": {},
         }
 
@@ -107,10 +116,12 @@ def _run_pipeline(record: JobRecord):
             if state_vals.get("candidate_profile") and _node_not_yet_reported(record, "profile_analyzer"):
                 record.push_event({"type": "node_done", "node": "profile_analyzer"})
                 record.push_event({"type": "node_done", "node": "job_scraper"})
+                current_node = "gap_analyzer"
                 record.push_event({"type": "node_start", "node": "gap_analyzer", "label": "Gap Analyzer"})
 
             if state_vals.get("gap_analysis_report") and _node_not_yet_reported(record, "gap_analyzer"):
                 record.push_event({"type": "node_done", "node": "gap_analyzer"})
+                current_node = "interviewer"
                 record.push_event({"type": "node_start", "node": "interviewer", "label": "Generating Questions"})
 
             if state_vals.get("interview_questions") and _node_not_yet_reported(record, "interviewer"):
@@ -123,10 +134,13 @@ def _run_pipeline(record: JobRecord):
                 })
 
         # --- Phase 2: wait for user answers ---
-        record.answers_ready.wait(timeout=600)  # 10-minute timeout
+        answered = record.answers_ready.wait(timeout=3600)  # 1-hour timeout
+        if not answered:
+            raise TimeoutError("Chatbot interview session timed out after 60 minutes.")
 
         # --- Phase 3: inject answers and resume ---
         record.push_event({"type": "node_done",  "node": "interviewer"})
+        current_node = "resume_rewriter"
         record.push_event({"type": "node_start", "node": "resume_rewriter", "label": "Resume Rewriter"})
 
         agent.update_state(
@@ -142,9 +156,32 @@ def _run_pipeline(record: JobRecord):
         snapshot = agent.get_state(record.thread_config)
         pdf_path = Path(record.resume_path).parent / "tailored_resume.pdf"
         if pdf_path.exists():
-            dest = JOBS_DIR / f"{record.job_id}.pdf"
-            shutil.copy(pdf_path, dest)
-            record.pdf_path = str(dest)
+            if s3_storage.active:
+                s3_key = f"guests/{record.job_id}.pdf"
+                success = s3_storage.upload_file(str(pdf_path), s3_key)
+                if success:
+                    record.s3_key = s3_key
+                    # Purge local workspace folder completely (with retries for Windows file locks)
+                    import time
+                    purged = False
+                    for attempt in range(5):
+                        try:
+                            shutil.rmtree(os.path.dirname(record.resume_path))
+                            purged = True
+                            break
+                        except Exception:
+                            time.sleep(0.5)
+                    if not purged:
+                        print(f"[CLEANUP] Failed to purge local workspace folder after 5 attempts.")
+                else:
+                    # Fallback to local copy if upload fails
+                    dest = JOBS_DIR / f"{record.job_id}.pdf"
+                    shutil.copy(pdf_path, dest)
+                    record.pdf_path = str(dest)
+            else:
+                dest = JOBS_DIR / f"{record.job_id}.pdf"
+                shutil.copy(pdf_path, dest)
+                record.pdf_path = str(dest)
 
         record.push_event({"type": "node_done", "node": "resume_rewriter"})
         record.push_event({"type": "complete"})
@@ -153,7 +190,7 @@ def _run_pipeline(record: JobRecord):
     except Exception as exc:
         record.push_event({
             "type": "node_error",
-            "node": "resume_rewriter",
+            "node": current_node,
             "message": str(exc),
         })
         record.error = str(exc)
@@ -194,6 +231,7 @@ async def run_pipeline(
     with open(resume_path, "wb") as f:
         content = await resume.read()
         f.write(content)
+    await resume.close()
 
     # Save job description
     job_file = str(job_dir / "job_description.txt")
@@ -211,7 +249,8 @@ async def run_pipeline(
         job_id=job_id,
         resume_path=resume_path,
         job_file=job_file,
-        job_url=job_url.strip() if job_url else None
+        job_url=job_url.strip() if job_url else None,
+        template=template,
     )
 
     with _JOBS_LOCK:
@@ -288,6 +327,25 @@ async def download_pdf(job_id: str, download: bool = False):
         record = _JOBS.get(job_id)
     if not record:
         raise HTTPException(status_code=404, detail="Job not found")
+    
+    if getattr(record, "s3_key", None):
+        try:
+            # Stream directly from S3 to avoid CORS issues in the frontend PDF canvas viewer
+            s3_client = s3_storage.client
+            bucket = s3_storage.bucket_name
+            obj = s3_client.get_object(Bucket=bucket, Key=record.s3_key)
+            
+            disposition = "attachment" if download else "inline"
+            return StreamingResponse(
+                obj["Body"],
+                media_type="application/pdf",
+                headers={
+                    "Content-Disposition": f'{disposition}; filename="tailored_resume.pdf"'
+                }
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"S3 download failed: {e}")
+
     if not record.pdf_path or not os.path.exists(record.pdf_path):
         raise HTTPException(status_code=404, detail="PDF not yet generated")
 

@@ -7,6 +7,12 @@ import json
 
 load_dotenv()
 
+# Map standard AWS credentials for Bedrock/boto3 integration
+if os.getenv("AWS_ACCESS_KEY") and not os.getenv("AWS_ACCESS_KEY_ID"):
+    os.environ["AWS_ACCESS_KEY_ID"] = os.getenv("AWS_ACCESS_KEY")
+if os.getenv("AWS_SECRET_KEY") and not os.getenv("AWS_SECRET_ACCESS_KEY"):
+    os.environ["AWS_SECRET_ACCESS_KEY"] = os.getenv("AWS_SECRET_KEY")
+
 def execute_resume_rewrite(original_profile: Dict[str, Any], job_spec: Dict[str, Any], gap_report: Dict[str, Any], user_answers: Dict[str, str]) -> str:
     """
     Consumes candidate data, target job specifications, and conversational answers.
@@ -15,11 +21,15 @@ def execute_resume_rewrite(original_profile: Dict[str, Any], job_spec: Dict[str,
     """
     print("\n[NODE] ---> Executing Dynamic 1-Page LaTeX Engine...")
 
+    model_id = os.getenv("MODEL_ID", "us.anthropic.claude-haiku-4-5-20251001-v1:0")
+    region = os.getenv("AWS_REGION", "us-east-1")
+
     llm = init_chat_model(
-        model="openai/gpt-oss-120b",
-        model_provider="groq",
+        model=model_id,
+        model_provider="bedrock",
         temperature=0.1,
-        max_tokens=4096
+        max_tokens=4096,
+        region_name=region
     )
 
     full_name = (original_profile.get("full_name") or "CANDIDATE NAME").strip()
@@ -130,9 +140,21 @@ RULE 5 — CERTIFICATIONS:
 RULE 6 — EDUCATION:
   List ALL education entries from the profile data. Format EXACTLY as:
     \\textbf{{Institution Name}} \\hfill Timeline\\\\
-    Degree -- CGPA: X/10   (or Degree -- Percentage: XX\\%)
-  Separate entries with \\\\[3pt] between them. Do NOT use \\item or itemize here.
+    Degree -- CGPA: X/10\\\\   (or Degree -- Percentage: XX\\%\\\\)
+  CRITICAL FORMATTING:
+  - Separate entries with \\vspace{{3pt}} (no blank line before or after this command).
+  - The \\vspace{{3pt}} line must be IMMEDIATELY followed by \\textbf on the next line — NO blank lines.
+  - Every degree/grade line MUST end with \\\\ (double backslash).
+  - Do NOT use \\item or itemize here.
+  - Do NOT leave ANY blank lines inside the Education section.
   Always include CGPA or percentage if present in the data.
+  Example of CORRECT Education formatting:
+    \\section*{{Education}}
+    \\textbf{{University Name}} \\hfill 2020 -- 2024\\\\
+    B.Tech in Computer Science -- CGPA: 8.5/10\\\\
+    \\vspace{{3pt}}
+    \\textbf{{School Name}} \\hfill Completed 2020\\\\
+    HSC -- Percentage: 85\\%\\\\
 
 RULE 7 — LATEX COMPLIANCE (CRITICAL):
   - Every & must be \\&
@@ -150,6 +172,9 @@ RULE 9 — TRUTHFULNESS & SKILL INTEGRITY (MANDATORY):
   - Do NOT assume, fabricate, or hallucinate skills that are not explicitly in the candidate's profile data or conversational answers.
   - You MUST NOT include any skills or technologies anywhere on the resume (not in the professional summary, skills list, experience, or projects) if they are missing from the candidate's profile or have not been confirmed in the conversational answers.
   - Instead, focus exclusively on the skills they actually possess or have confirmed exposure to.
+
+RULE 10 — VOCABULARY DIVERSITY (MANDATORY):
+  Never repeat the same action verbs (such as 'implemented', 'designed', 'developed', 'led') more than twice across the entire resume. Use a rich and diverse set of action verbs (e.g., 'architected', 'engineered', 'streamlined', 'orchestrated', 'executed', 'formulated', 'spearheaded', 'pioneered', 'optimized', 'modernized').
 
 =====================================================================
 PART 3 — SELF-VALIDATION CHECKLIST (run before outputting)
@@ -207,5 +232,110 @@ Before outputting, verify:
         # Drop first and last fence lines
         content = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
 
+    content = _fix_latex(content)
     return content
+
+
+def _fix_latex(source: str) -> str:
+    """
+    Post-process the LLM-generated LaTeX to fix common formatting mistakes:
+    1. Remove blank lines inside the \\section*{Education} block (blank lines break spacing).
+    2. Ensure every non-empty, non-command line inside Education ends with \\\\ if it doesn't already.
+    3. Ensure the last Technical Skills subcategory line ends with \\\\ (LLM often omits it).
+    4. Remove blank lines immediately after \\vspace{...} commands.
+    """
+    import re
+
+    lines = source.splitlines()
+    result = []
+    in_education = False
+    in_skills = False
+    skills_lines = []          # buffer for skills lines
+    skills_start_idx = None    # index in result[] where skills content starts
+
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        stripped = line.strip()
+
+        # ── Detect section boundaries ──────────────────────────────────────
+        if re.match(r'\\section\*\{Education\}', stripped):
+            in_education = True
+            in_skills = False
+            result.append(line)
+            i += 1
+            continue
+
+        if re.match(r'\\section\*\{Technical Skills\}', stripped, re.IGNORECASE) or \
+           re.match(r'\\section\*\{Skills\}', stripped, re.IGNORECASE):
+            in_skills = True
+            in_education = False
+            skills_lines = []
+            skills_start_idx = len(result)
+            result.append(line)
+            i += 1
+            continue
+
+        # Leaving education / skills on any new \section
+        if stripped.startswith('\\section') and in_education:
+            in_education = False
+        if stripped.startswith('\\section') and in_skills:
+            # Flush skills: ensure last non-empty skills line ends with \\
+            _flush_skills(result, skills_lines)
+            skills_lines = []
+            in_skills = False
+
+        # ── Education block: no blank lines, degree lines end with \\ ───────
+        if in_education:
+            # Skip blank lines entirely inside education
+            if stripped == '':
+                i += 1
+                continue
+
+            # Ensure \vspace lines are not followed by blank line (handled by skipping blanks above)
+            # Ensure degree/grade lines end with \\
+            if not stripped.startswith('\\') or stripped.startswith('\\textbf') or stripped.startswith('\\textit'):
+                # It's a content line (institution or degree). Ensure \\ at end.
+                if not stripped.endswith('\\\\') and not stripped.endswith('\\\\%'):
+                    line = line.rstrip() + '\\\\'
+
+            result.append(line)
+            i += 1
+            continue
+
+        # ── Skills block: buffer lines for post-processing ─────────────────
+        if in_skills:
+            skills_lines.append(line)
+            result.append(line)
+            i += 1
+            continue
+
+        # ── Global: remove blank lines immediately after \vspace{...} ───────
+        result.append(line)
+        if re.match(r'\\vspace\{', stripped):
+            # Skip any following blank lines
+            while i + 1 < len(lines) and lines[i + 1].strip() == '':
+                i += 1
+        i += 1
+
+    # If document ended while still in skills, flush
+    if in_skills and skills_lines:
+        _flush_skills(result, skills_lines)
+
+    return '\n'.join(result)
+
+
+def _flush_skills(result: list, skills_lines: list):
+    """
+    Ensure the last non-empty, non-section-boundary skills line ends with \\.
+    Mutates `result` in-place by patching the last skills line if needed.
+    """
+    import re
+    # Find the last non-empty skills content line index in result
+    for j in range(len(result) - 1, -1, -1):
+        s = result[j].strip()
+        if s and not s.startswith('\\section'):
+            if not s.endswith('\\\\'):
+                result[j] = result[j].rstrip() + '\\\\'
+            break
 

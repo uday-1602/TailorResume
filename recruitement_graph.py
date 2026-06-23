@@ -24,6 +24,7 @@ class RecruiterGraphState(TypedDict):
     resume_path: str
     job_url: Optional[str]          # Live job posting URL; falls back to fallback_job_file if empty
     fallback_job_file: str
+    template: str                   # "default" (LaTeX/classic) or "modern" (HTML/WeasyPrint)
     candidate_profile: Dict[str, Any]
     job_specifications: Dict[str, Any]
     gap_analysis_report: Dict[str, Any]
@@ -77,38 +78,54 @@ def human_input_node(state: RecruiterGraphState) -> Dict[str, Any]:
     return {}
 
 def resume_rewriter_node(state: RecruiterGraphState) -> Dict[str, Any]:
-    print("\n[LANGGRAPH NODE] ---> resume_rewriter_node compiling 1-page LaTeX code...")
+    template = state.get("template", "default")
+    print(f"\n[LANGGRAPH NODE] ---> resume_rewriter_node | template={template}")
     print(f"[REWRITER] Working with alignment score: {state.get('alignment_score', 'N/A')}%")
 
+    resume_dir = os.path.dirname(state["resume_path"])
+    pdf_filename = os.path.join(resume_dir, "tailored_resume.pdf")
+
+    # Remove any stale PDF from a prior run
+    if os.path.exists(pdf_filename):
+        try:
+            os.remove(pdf_filename)
+        except Exception:
+            pass
+
+    # ── Modern template: HTML → WeasyPrint PDF ────────────────────────────────
+    if template == "modern":
+        from backend.templates.modern import execute_resume_rewrite_modern
+        content = execute_resume_rewrite_modern(
+            original_profile=state["candidate_profile"],
+            job_spec=state["job_specifications"],
+            gap_report=state["gap_analysis_report"],
+            user_answers=state["user_answers"],
+            output_pdf_path=pdf_filename,
+        )
+        return {"final_latex_source": content}
+
+    # ── Classic template: LLM → LaTeX → latexonline.cc PDF ───────────────────
     latex_code = execute_resume_rewrite(
         original_profile=state["candidate_profile"],
         job_spec=state["job_specifications"],
         gap_report=state["gap_analysis_report"],
         user_answers=state["user_answers"]
     )
-    
-    resume_dir = os.path.dirname(state["resume_path"])
+
     tex_filename = os.path.join(resume_dir, "tailored_resume.tex")
     tar_filename = os.path.join(resume_dir, "payload.tar.bz2")
-    pdf_filename = os.path.join(resume_dir, "tailored_resume.pdf")
-    
-    if os.path.exists(pdf_filename):
-        try:
-            os.remove(pdf_filename)
-        except Exception:
-            pass
-            
+
     with open(tex_filename, "w", encoding="utf-8") as f:
         f.write(latex_code)
     print(f"[FILE OUT] LaTeX source code written to: {os.path.abspath(tex_filename)}")
-   
+
     print("\n[COMPILER] Packing LaTeX file into a compressed stream...")
     with tarfile.open(tar_filename, "w:bz2") as tar:
         tar.add(tex_filename, arcname="tailored_resume.tex")
 
     print("[COMPILER] Sending payload to the cloud compiler API (5-10 seconds)...")
     api_url = "https://latexonline.cc/data?target=tailored_resume.tex&command=pdflatex"
-    
+
     from tenacity import retry, stop_after_attempt, wait_exponential
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
@@ -122,13 +139,11 @@ def resume_rewriter_node(state: RecruiterGraphState) -> Dict[str, Any]:
         response = _compile_pdf()
         with open(pdf_filename, "wb") as pdf_file:
             pdf_file.write(response.content)
-        print(f"\nSUCCESS! Ultra-dense 1-page '{pdf_filename}' has been generated via cloud API!")
+        print(f"\nSUCCESS! 1-page PDF '{pdf_filename}' generated via cloud API!")
     except Exception as e:
         print(f"\nERROR: Cloud compilation failed: {str(e)}")
         raise e
-        
     finally:
-        # Automatically clean up the temporary workspace archive file
         if os.path.exists(tar_filename):
             os.remove(tar_filename)
 
@@ -170,6 +185,7 @@ if __name__ == "__main__":
         "resume_path": "resume.pdf",
         "job_url": "",
         "fallback_job_file": "job_description.txt",
+        "template": "default",
         "user_answers": {}
     }
 
