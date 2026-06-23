@@ -168,19 +168,18 @@ CONTENT RULES
 =======================================================================
 
 RULE 1 — SUMMARY (2 specific sentences):
-  Sentence 1: [Role identity] with [current role/internship/academic] experience in [core domain], \
+  Sentence 1: [Role identity] with [current role/experience/academic] experience in [core domain], \
 specializing in [2-3 top technical areas the candidate genuinely has].
   Sentence 2: Proven ability to [key capability from experience/projects], with hands-on exposure to \
 [1-2 specific tools from the job spec that appear in the candidate's profile or user answers].
-  IMPORTANT: DO NOT state years of professional experience unless explicitly confirmed. \
-Use terms like "hands-on academic experience" instead.
+  IMPORTANT: If the candidate's original resume/profile explicitly mentions their years of experience (e.g. "3+ years") or important industry domains (e.g. "for one of the biggest NBFC companies"), you MUST preserve these details in your summary. Otherwise, do NOT state years of professional experience and use terms like "hands-on academic experience" instead. Do NOT fabricate years of experience.
 
 RULE 2 — SKILLS (4-5 categories):
   Pull skills ONLY from core_technical_skills AND skills the candidate confirmed in their answers.
   DO NOT include any skill not present in the candidate profile or user answers.
 
 RULE 3 — EXPERIENCE (1-2 most recent entries):
-  2-3 bullets per entry. Each bullet: action-verb first, under 20 words.
+  3-5 bullets per entry. Do NOT arbitrarily truncate or delete bullets if the candidate has them in their original profile; preserve their detailed achievements (up to 5 bullets per role) so the page is fully and professionally utilized. Each bullet: action-verb first, under 20 words.
   Weave in required job skills ONLY where the candidate genuinely has exposure.
 
 RULE 4 — PROJECTS (2-3 most relevant):

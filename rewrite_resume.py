@@ -44,16 +44,25 @@ def execute_resume_rewrite(original_profile: Dict[str, Any], job_spec: Dict[str,
     github_escaped = github_username.replace("_", "\\_") if github_username else ""
     linkedin_escaped = linkedin_username.replace("_", "\\_") if linkedin_username else ""
 
-    contact_items = []
-    if email_escaped:
-        contact_items.append(f"Email: \\href{{mailto:{email_escaped}}}{{{email_escaped}}}")
+    contact_row1_parts = []
     if phone:
-        contact_items.append(f"Phone: {phone}")
+        contact_row1_parts.append(phone)
+    if email_escaped:
+        contact_row1_parts.append(f"\\href{{mailto:{email_escaped}}}{{{email_escaped}}}")
     if github_username:
-        contact_items.append(f"GitHub: \\href{{https://github.com/{github_username}}}{{github.com/{github_escaped}}}")
+        contact_row1_parts.append(f"GitHub: \\href{{https://github.com/{github_username}}}{{github.com/{github_escaped}}}")
+    contact_row1 = " $|$ ".join(contact_row1_parts)
+
+    contact_row2 = ""
     if linkedin_username:
-        contact_items.append(f"LinkedIn: \\href{{https://linkedin.com/in/{linkedin_username}}}{{linkedin.com/in/{linkedin_escaped}}}")
-    contact_line = " \\quad ".join(contact_items)
+        contact_row2 = f"LinkedIn: \\href{{https://linkedin.com/in/{linkedin_username}}}{{linkedin.com/in/{linkedin_escaped}}}"
+
+    contact_block_lines = []
+    if contact_row1:
+        contact_block_lines.append(f"    {contact_row1}\\\\\n")
+    if contact_row2:
+        contact_block_lines.append(f"    {contact_row2}\n")
+    contact_block = "".join(contact_block_lines)
 
     # --- Fixed preamble block (hardcoded, must be output verbatim) ---
     preamble = (
@@ -71,10 +80,10 @@ def execute_resume_rewrite(original_profile: Dict[str, Any], job_spec: Dict[str,
         "\\begin{document}\n"
         "\\begin{center}\n"
         f"    {{\\LARGE \\textbf{{{full_name}}}}}\\\\\n"
-        "    \\vspace{1mm}\n"
-        f"    {contact_line}\n"
+        "    \\vspace{1.5mm}\n"
+        f"{contact_block}"
         "\\end{center}\n"
-        "\\vspace{-3mm}"
+        "\\vspace{-2mm}"
     )
 
     sys_instruction = f"""You are an expert technical resume writer specializing in AI/ML engineering roles. \
@@ -99,19 +108,19 @@ PART 2 — CONTENT RULES
 
 RULE 1 — PROFESSIONAL SUMMARY (2 sentences, not generic):
   Write using this formula:
-    Sentence 1: [Role identity] with [current role / internship and academic] experience in [core domain], specializing in [2-3 top technical areas from the job spec that the candidate genuinely has].
+    Sentence 1: [Role identity] with [current role / experience / academic] experience in [core domain], specializing in [2-3 top technical areas from the job spec that the candidate genuinely has].
     Sentence 2: Proven ability to [key capability from experience highlights or projects], with hands-on exposure to [1-2 specific tools from job spec found in their profile or user answers].
   IMPORTANT:
     - Be specific to this candidate and this job. Do NOT write generic filler.
-    - Check the candidate's actual graduation date and experience duration. DO NOT state experience duration (e.g. "X+ years of experience") or fabricate any years of professional experience that is not supported by the candidate's profile data. Instead, describe their experience level accurately using terms like "hands-on internship and academic experience" or their actual roles.
+    - Check the candidate's actual graduation date and experience duration. If their original profile/resume explicitly mentions their years of experience (e.g. "3+ years") or important industry domains (e.g. "for one of the biggest NBFC companies"), you MUST preserve these details in your summary. Otherwise, describe their experience level accurately using terms like "hands-on internship and academic experience" or their actual roles. Do NOT fabricate years of experience not supported by the data.
   End the summary block with a single \\ (not \\\\).
 
 RULE 2 — TECHNICAL SKILLS:
   Organize into 4-5 bold subcategories (e.g., \\textbf{{Languages:}}, \\textbf{{AI/ML:}}, \\textbf{{Cloud:}}, \\textbf{{Databases:}}, \\textbf{{Web \\& Tools:}}).
-  Each subcategory on its own line ending with \\\\
-  Pull skills from core_technical_skills AND weave in preferred_or_bonus_skills the candidate has exposure.
+  Pull skills ONLY from candidate's profile or user answers. Match them logically.
+  Each line MUST end with \\\\ (double backslash).
 
-RULE 3 — PROFESSIONAL EXPERIENCE:
+RULE 3 — EXPERIENCE (1 to 2 experience entries, most recent first):
   Include 1 to 2 experience entries (most recent first). Omit least relevant if space is tight.
   Format EXACTLY as:
     \\textbf{{Organization}} \\hfill Start -- End\\\\
@@ -120,7 +129,7 @@ RULE 3 — PROFESSIONAL EXPERIENCE:
       \\item bullet
       \\item bullet
     \\end{{itemize}}
-  Use 2-3 bullets per entry. Each bullet must be under 20 words, action-verb first.
+  Use 3-5 bullets per entry. Do NOT arbitrarily truncate or delete bullets if the candidate has them in their original profile; preserve their detailed achievements (up to 5 bullets per role) so the page is fully and professionally utilized. Each bullet must be under 20 words, action-verb first.
   Weave in required job skills ONLY where the candidate genuinely has exposure based on their highlights or user answers. Do NOT include skills that the candidate lacks.
 
 RULE 4 — PROJECTS (2 to 3 entries, most relevant first):
