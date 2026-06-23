@@ -11,6 +11,7 @@ import os
 import json
 import re
 from typing import Dict, Any, List
+from datetime import datetime
 
 from langchain.chat_models import init_chat_model
 from dotenv import load_dotenv
@@ -206,6 +207,7 @@ RULE 9 — VOCABULARY DIVERSITY (MANDATORY):
 
     prompt_payload = (
         f"CANDIDATE DATA:\n{json.dumps(original_profile, indent=2)}\n\n"
+        f"CURRENT DATE/YEAR (for calculating experience duration): {datetime.now().strftime('%B %Y')}\n\n"
         f"TARGET JOB TITLE: {job_spec.get('job_title', 'N/A')}\n\n"
         f"REQUIRED HARD SKILLS:\n{json.dumps(job_spec.get('required_hard_skills', []), indent=2)}\n\n"
         f"PREFERRED / BONUS SKILLS:\n{json.dumps(job_spec.get('preferred_or_bonus_skills', []), indent=2)}\n\n"

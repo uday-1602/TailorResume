@@ -4,6 +4,7 @@ from langchain.chat_models import init_chat_model
 from dotenv import load_dotenv
 from tenacity import retry, stop_after_attempt, wait_exponential
 import json
+from datetime import datetime
 
 load_dotenv()
 
@@ -216,6 +217,7 @@ Before outputting, verify:
 
     prompt_payload = (
         f"CANDIDATE DATA SUBSET:\n{json.dumps(original_profile, indent=2)}\n\n"
+        f"CURRENT DATE/YEAR (for calculating experience duration): {datetime.now().strftime('%B %Y')}\n\n"
         f"TARGET JOB TITLE: {job_spec.get('job_title', 'N/A')}\n\n"
         f"TARGET JOB REQUIRED HARD SKILLS:\n{json.dumps(job_spec.get('required_hard_skills', []), indent=2)}\n\n"
         f"TARGET JOB PREFERRED / BONUS SKILLS:\n{json.dumps(job_spec.get('preferred_or_bonus_skills', []), indent=2)}\n\n"
