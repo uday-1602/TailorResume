@@ -36,10 +36,13 @@ def execute_resume_rewrite(original_profile: Dict[str, Any], job_spec: Dict[str,
     email = (original_profile.get("email") or "").strip()
     phone = (original_profile.get("phone") or "").strip()
     github = (original_profile.get("github_handle") or "").strip()
+    linkedin = (original_profile.get("linkedin_handle") or "").strip()
 
     github_username = github.split("/")[-1] if github and github.lower() not in ("n/a", "", "none") else ""
+    linkedin_username = linkedin.split("/")[-1] if linkedin and linkedin.lower() not in ("n/a", "", "none") else ""
     email_escaped = email.replace("_", "\\_") if email else ""
     github_escaped = github_username.replace("_", "\\_") if github_username else ""
+    linkedin_escaped = linkedin_username.replace("_", "\\_") if linkedin_username else ""
 
     contact_items = []
     if email_escaped:
@@ -48,6 +51,8 @@ def execute_resume_rewrite(original_profile: Dict[str, Any], job_spec: Dict[str,
         contact_items.append(f"Phone: {phone}")
     if github_username:
         contact_items.append(f"GitHub: \\href{{https://github.com/{github_username}}}{{github.com/{github_escaped}}}")
+    if linkedin_username:
+        contact_items.append(f"LinkedIn: \\href{{https://linkedin.com/in/{linkedin_username}}}{{linkedin.com/in/{linkedin_escaped}}}")
     contact_line = " \\quad ".join(contact_items)
 
     # --- Fixed preamble block (hardcoded, must be output verbatim) ---

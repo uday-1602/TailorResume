@@ -62,6 +62,25 @@ def interviewer_node(state: RecruiterGraphState) -> Dict[str, Any]:
     )
 
     questions_list = list(raw_questions)
+    
+    # Check for missing contact details
+    profile = state.get("candidate_profile", {})
+    github = (profile.get("github_handle") or "").strip()
+    linkedin = (profile.get("linkedin_handle") or "").strip()
+    
+    extra_questions = []
+    if not github or github.lower() in ("n/a", "none", ""):
+        extra_questions.append(
+            "Your GitHub profile link is missing. Would you like to provide it? (Optional - type 'skip' or leave blank to skip)"
+        )
+    if not linkedin or linkedin.lower() in ("n/a", "none", ""):
+        extra_questions.append(
+            "Your LinkedIn profile link is missing. Would you like to provide it? (Optional - type 'skip' or leave blank to skip)"
+        )
+        
+    # Prepend optional contact questions so they run first
+    questions_list = extra_questions + questions_list
+
     questions_list.append(
         "Do you have any relevant technical certifications, professional activities, or awards you want to include, or should I explicitly remove those placeholder sections?"
     )
@@ -92,11 +111,24 @@ def resume_rewriter_node(state: RecruiterGraphState) -> Dict[str, Any]:
         except Exception:
             pass
 
+    # Extract dynamic github/linkedin answers from user responses if they exist
+    user_answers = state.get("user_answers", {})
+    candidate_profile = dict(state.get("candidate_profile", {}))
+    
+    for q, ans in user_answers.items():
+        ans_clean = ans.strip()
+        if not ans_clean or ans_clean.lower() in ("skip", "n/a", "none", "omit parameter."):
+            continue
+        if "github" in q.lower():
+            candidate_profile["github_handle"] = ans_clean
+        elif "linkedin" in q.lower():
+            candidate_profile["linkedin_handle"] = ans_clean
+
     # ── Modern template: HTML → WeasyPrint PDF ────────────────────────────────
     if template == "modern":
         from backend.templates.modern import execute_resume_rewrite_modern
         content = execute_resume_rewrite_modern(
-            original_profile=state["candidate_profile"],
+            original_profile=candidate_profile,
             job_spec=state["job_specifications"],
             gap_report=state["gap_analysis_report"],
             user_answers=state["user_answers"],
@@ -106,7 +138,7 @@ def resume_rewriter_node(state: RecruiterGraphState) -> Dict[str, Any]:
 
     # ── Classic template: LLM → LaTeX → latexonline.cc PDF ───────────────────
     latex_code = execute_resume_rewrite(
-        original_profile=state["candidate_profile"],
+        original_profile=candidate_profile,
         job_spec=state["job_specifications"],
         gap_report=state["gap_analysis_report"],
         user_answers=state["user_answers"]

@@ -277,7 +277,7 @@ def _build_html(data: Dict[str, Any], profile: Dict[str, Any]) -> str:
     proj_bullets = sum(len(proj.get("bullets", [])) for proj in data.get("projects", []))
     
     total_blocks = exp_count + proj_count + edu_count + (1 if cert_count > 0 else 0) + exp_bullets + proj_bullets
-    is_compact = total_blocks >= 21
+    is_compact = total_blocks >= 26
 
     # --- Contact info comes from raw profile (not LLM) to prevent hallucination ---
     full_name = (profile.get("full_name") or "CANDIDATE NAME").upper()
@@ -285,6 +285,8 @@ def _build_html(data: Dict[str, Any], profile: Dict[str, Any]) -> str:
     phone = (profile.get("phone") or "").strip()
     github_raw = (profile.get("github_handle") or "").strip()
     github_user = github_raw.split("/")[-1] if github_raw and github_raw.lower() not in ("n/a", "none", "") else ""
+    linkedin_raw = (profile.get("linkedin_handle") or "").strip()
+    linkedin_user = linkedin_raw.split("/")[-1] if linkedin_raw and linkedin_raw.lower() not in ("n/a", "none", "") else ""
 
     role_title = _esc(data.get("current_role_title") or "")
     summary_text = _esc(data.get("summary") or "")
@@ -297,6 +299,8 @@ def _build_html(data: Dict[str, Any], profile: Dict[str, Any]) -> str:
         contact_parts.append(f"&#9993;&nbsp;{_esc(email)}")
     if github_user:
         contact_parts.append(f"&#128279;&nbsp;github.com/{_esc(github_user)}")
+    if linkedin_user:
+        contact_parts.append(f"&#128279;&nbsp;linkedin.com/in/{_esc(linkedin_user)}")
     contacts_html = " &nbsp;&bull;&nbsp; ".join(contact_parts)
 
     # --- Skills (right column) ---

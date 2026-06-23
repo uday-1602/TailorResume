@@ -33,6 +33,7 @@ class CandidateProfileSchema(BaseModel):
     email: Optional[str] = Field(None, description = "The candidate's email.")
     phone: Optional[str] = Field(None, description = "The candidate's phone number.")
     github_handle: Optional[str] = Field(None, description = "The candidate's github handle.")
+    linkedin_handle: Optional[str] = Field(None, description = "The candidate's linkedin profile URL or username.")
     core_technical_skills: List[str] = Field(description="A comprehensive, clean list of programming languages, tools, frameworks, databases, and cloud services explicitly mentioned.")
     professional_experience: List[ExperienceSchema] = Field(description="List of internships, trainee positions, or formal engineering roles.")
     engineered_projects: List[ProjectSchema] = Field(description="List of software applications, extensions, hardware integrations, or AI systems developed.")
