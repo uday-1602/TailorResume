@@ -330,15 +330,24 @@ async def download_pdf(job_id: str, download: bool = False):
     """Serve the compiled tailored_resume.pdf for a given job."""
     with _JOBS_LOCK:
         record = _JOBS.get(job_id)
-    if not record:
-        raise HTTPException(status_code=404, detail="Job not found")
     
-    if getattr(record, "s3_key", None):
+    s3_key = getattr(record, "s3_key", None)
+    
+    # Fallback to S3 check if record is missing or key is not set
+    if not s3_key and s3_storage.active:
+        potential_s3_key = f"guests/{job_id}.pdf"
+        try:
+            s3_storage.client.head_object(Bucket=s3_storage.bucket_name, Key=potential_s3_key)
+            s3_key = potential_s3_key
+        except Exception:
+            pass
+
+    if s3_key:
         try:
             # Stream directly from S3 to avoid CORS issues in the frontend PDF canvas viewer
             s3_client = s3_storage.client
             bucket = s3_storage.bucket_name
-            obj = s3_client.get_object(Bucket=bucket, Key=record.s3_key)
+            obj = s3_client.get_object(Bucket=bucket, Key=s3_key)
             
             disposition = "attachment" if download else "inline"
             return StreamingResponse(
@@ -351,12 +360,23 @@ async def download_pdf(job_id: str, download: bool = False):
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"S3 download failed: {e}")
 
-    if not record.pdf_path or not os.path.exists(record.pdf_path):
-        raise HTTPException(status_code=404, detail="PDF not yet generated")
+    # Fallback to local file paths
+    pdf_path = getattr(record, "pdf_path", None)
+    if not pdf_path:
+        local_dest = JOBS_DIR / f"{job_id}.pdf"
+        if local_dest.exists():
+            pdf_path = str(local_dest)
+        else:
+            sub_pdf = JOBS_DIR / job_id / "tailored_resume.pdf"
+            if sub_pdf.exists():
+                pdf_path = str(sub_pdf)
+
+    if not pdf_path or not os.path.exists(pdf_path):
+        raise HTTPException(status_code=404, detail="PDF not yet generated or job not found")
 
     disposition = "attachment" if download else "inline"
     return FileResponse(
-        record.pdf_path,
+        pdf_path,
         media_type="application/pdf",
         filename="tailored_resume.pdf",
         content_disposition_type=disposition,
