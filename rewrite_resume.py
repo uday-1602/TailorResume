@@ -112,16 +112,17 @@ def execute_resume_rewrite(original_profile: Dict[str, Any], job_spec: Dict[str,
 
     # --- Dynamic prompt parts based on page_limit ---
     page_label = "SINGLE-PAGE" if page_limit == 1 else "TWO-PAGE"
-    exp_count = "1 to 2" if page_limit == 1 else "2 to 4"
-    exp_bullets = "3-5" if page_limit == 1 else "4-5"
+    exp_count = "strictly 1 to 2 most recent entries" if page_limit == 1 else "2 to 4"
+    exp_bullets = "max 3 bullets per entry" if page_limit == 1 else "4-5"
     exp_newpage_note = (
-        "  Omit the least relevant experience entries if space is tight.\n"
+        "  Omit the least relevant experience entries if space is tight. Do NOT overflow the page.\n"
         if page_limit == 1 else
         "  You have a 2-page budget -- preserve ALL significant experience entries.\n"
         "  Immediately before \\section*{Projects}, insert exactly one blank line then: \\newpage\n"
         "  This splits the document cleanly: Projects and Education begin on Page 2.\n"
     )
-    proj_count = "2 to 3" if page_limit == 1 else "3 to 4"
+    proj_count = "strictly 1 to 2 most relevant projects" if page_limit == 1 else "strictly 3 to 4 most relevant projects"
+    proj_bullets = "max 2 bullets per project" if page_limit == 1 else "2 to 3"
     page_rule = (
         "RULE 8 -- ONE PAGE GUARANTEE:\n"
         "  The entire document MUST fit on exactly one page when compiled.\n"
@@ -210,7 +211,7 @@ RULE 4 -- EXPERIENCE ({exp_count} experience entries, most recent first):
   - Use increasingly senior action verbs for more recent roles: "Implemented" -> "Architected" -> "Spearheaded".
   - Highlight business scale (users, transactions, data volume) ONLY if mentioned in the source profile. Do NOT fabricate metrics.
 
-RULE 5 -- PROJECTS ({proj_count} entries, most relevant first):
+RULE 5 -- PROJECTS ({proj_count}, most relevant first):
   Select projects with the HIGHEST overlap to the target job's required skills. Omit unrelated ones.
   Format EXACTLY as:
     \\textbf{{Project Name}} $|$ \\textit{{Tech1, Tech2, Tech3}}
@@ -218,7 +219,7 @@ RULE 5 -- PROJECTS ({proj_count} entries, most relevant first):
       \\item bullet
       \\item bullet
     \\end{{itemize}}
-  Use 2-3 bullets per project. Each bullet under 20 words, action-verb first.
+  Use {proj_bullets} bullets per project. Each bullet under 18 words, action-verb first.
   Actively map and frame the project details using the target job's vocabulary.
   DO NOT fabricate metrics, percentages, star counts, or document volumes not present in the source data. Describe impact qualitatively instead (e.g., "enabling fast semantic retrieval", "streamlining knowledge access").
 

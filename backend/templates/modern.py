@@ -122,14 +122,14 @@ def _generate_resume_json(
     strategic_rec = gap_report.get("strategic_recommendation", "")
 
     page_label = "single-page" if page_limit == 1 else "two-page"
-    exp_count_rule = "1-2 most recent entries" if page_limit == 1 else "2-4 most recent entries (you have 2 pages, do NOT truncate)"
-    exp_bullets_rule = "3-5 bullets" if page_limit == 1 else "4-5 bullets"
-    proj_count_rule = "2-3 most relevant" if page_limit == 1 else "3-4 most relevant (use the extra page budget)"
+    exp_count_rule = "strictly 1-2 most recent entries (select the most relevant, omit others)" if page_limit == 1 else "2-4 most recent entries (you have 2 pages, do NOT truncate)"
+    exp_bullets_rule = "max 3 bullets per entry" if page_limit == 1 else "4-5 bullets"
+    proj_count_rule = "strictly 1-2 most relevant projects (omit others)" if page_limit == 1 else "strictly 3-4 most relevant projects (omit others)"
+    proj_bullets_rule = "max 2 bullets per project" if page_limit == 1 else "2-3 bullets"
     page_budget_rule = (
-        "RULE 8 — SINGLE PAGE: Keep all content concise. Under 18 words per bullet. Omit less relevant entries if needed."
+        "RULE 8 — SINGLE PAGE: Keep all content extremely concise. Under 18 words per bullet. Omit less relevant entries. Everything MUST fit on exactly one page."
         if page_limit == 1 else
-        "RULE 8 — TWO PAGES: You have a 2-page budget. Fill it with substantial professional content. "
-        "Do NOT compress or cut entries unnecessarily. Aim for thorough coverage of all experience."
+        "RULE 8 — TWO PAGES: You have a 2-page budget. Fill it with substantial professional content, but strictly limit to 3-4 projects and 2-4 experiences. Each project bullet under 18 words."
     )
 
     sys_instruction = f"""\
@@ -206,7 +206,7 @@ RULE 3 — EXPERIENCE ({exp_count_rule}):
 
 RULE 4 — PROJECTS ({proj_count_rule}):
   Select projects with the HIGHEST overlap to the target job's required skills. Omit unrelated ones.
-  Use 2-3 bullets per project. Each bullet under 20 words, action-verb first.
+  Use {proj_bullets_rule} per project. Each bullet under 18 words, action-verb first.
   Actively map and frame the project details using the target job's vocabulary.
   DO NOT fabricate metrics, percentages, or counts not in the source data. Describe impact qualitatively instead.
 
@@ -458,25 +458,32 @@ body {{
 /* ── Two-column page ── */
 .page {{
     width: 210mm;
-    min-height: 297mm;
-    background: white;
+    height: 297mm;
+    max-height: 297mm;
+    background: linear-gradient(to right, white 0%, white 59%, #e0e0e0 59%, #e0e0e0 calc(59% + 1px), #f7f8f9 calc(59% + 1px), #f7f8f9 100%);
     overflow: hidden;
+    position: relative;
+}}
+
+.page.page-single {{
+    background: white;
 }}
 
 .left-col {{
     float: left;
     width: 59%;
-    padding: 30px 18px 30px 30px;
-    min-height: 297mm;
-    border-right: 1.5px solid #e0e0e0;
+    padding: 20px 18px 20px 30px;
 }}
 
 .right-col {{
     float: left;
     width: 41%;
-    padding: 30px 30px 30px 18px;
-    min-height: 297mm;
-    background: #f7f8f9;
+    padding: 20px 30px 20px 18px;
+}}
+
+.full-width-col {{
+    width: 100%;
+    padding: 0 30px 30px 30px;
 }}
 
 .clearfix::after {{
@@ -486,10 +493,32 @@ body {{
 }}
 
 /* ── Header ── */
-.header {{
-    margin-bottom: 18px;
-    padding-bottom: 12px;
+.header-full {{
+    width: 100%;
+    padding: 25px 30px 15px 30px;
     border-bottom: 2.5px solid #0d9488;
+    background: white;
+    position: relative;
+    z-index: 10;
+}}
+
+.header-p2 {{
+    width: 100%;
+    padding: 15px 30px;
+    border-bottom: 1px solid #e0e0e0;
+    margin-bottom: 20px;
+    font-size: 8.5pt;
+    color: #6b7280;
+    overflow: hidden;
+}}
+
+.header-p2-name {{
+    float: left;
+    font-weight: bold;
+}}
+
+.header-p2-page {{
+    float: right;
 }}
 
 .candidate-name {{
@@ -694,33 +723,35 @@ body {{
 }}
 
 /* ── 2-page: page break between page divs ── */
-.page {{
+.page, .page-single {{
     page-break-after: always;
     break-after: page;
 }}
-.page:last-child {{
+.page:last-child, .page-single:last-child {{
     page-break-after: avoid;
     break-after: avoid;
 }}
 
 /* ── Compact layout overrides ── */
-.page.compact {{
+.page.compact, .page-single.compact {{
     font-size: 9pt;
     line-height: 1.32;
 }}
 .page.compact .left-col {{
     float: left;
     width: 59%;
-    padding: 22px 14px 22px 22px;
+    padding: 15px 14px 15px 22px;
 }}
 .page.compact .right-col {{
     float: left;
     width: 41%;
-    padding: 22px 22px 22px 14px;
+    padding: 15px 22px 15px 14px;
 }}
-.page.compact .header {{
-    margin-bottom: 12px;
-    padding-bottom: 8px;
+.page.compact .full-width-col {{
+    padding: 0 22px 22px 22px;
+}}
+.page.compact .header-full {{
+    padding: 15px 22px 10px 22px;
     border-bottom-width: 2px;
 }}
 .page.compact .candidate-name {{
@@ -845,15 +876,15 @@ def _build_page_html(
         return f"""
 <div class="page clearfix {compact_class}">
 
+    <!-- Header -->
+    <div class="header-full">
+        <div class="candidate-name">{esc_fn(full_name)}</div>
+        {f'<div class="candidate-role">{role_title}</div>' if role_title else ''}
+        <div class="contacts">{contacts_html}</div>
+    </div>
+
     <!-- ═══ LEFT COLUMN ═══ -->
     <div class="left-col">
-
-        <!-- Header -->
-        <div class="header">
-            <div class="candidate-name">{esc_fn(full_name)}</div>
-            {f'<div class="candidate-role">{role_title}</div>' if role_title else ''}
-            <div class="contacts">{contacts_html}</div>
-        </div>
 
         <!-- Summary -->
         <div class="section">
@@ -922,15 +953,15 @@ def _build_page_html(
         return f"""
 <div class="page clearfix {compact_class}">
 
+    <!-- Header -->
+    <div class="header-full">
+        <div class="candidate-name">{esc_fn(full_name)}</div>
+        {f'<div class="candidate-role">{role_title}</div>' if role_title else ''}
+        <div class="contacts">{contacts_html}</div>
+    </div>
+
     <!-- ═══ PAGE 1 LEFT ═══ -->
     <div class="left-col">
-
-        <!-- Header -->
-        <div class="header">
-            <div class="candidate-name">{esc_fn(full_name)}</div>
-            {f'<div class="candidate-role">{role_title}</div>' if role_title else ''}
-            <div class="contacts">{contacts_html}</div>
-        </div>
 
         <!-- Summary -->
         <div class="section">
@@ -956,22 +987,21 @@ def _build_page_html(
 
 </div>
 
-<!-- ═══ PAGE 2 ═══ -->
-<div class="page clearfix {compact_class}">
+<!-- ═══ PAGE 2 (Single column full width layout) ═══ -->
+<div class="page page-single clearfix {compact_class}">
 
-    <!-- ═══ PAGE 2 LEFT ═══ -->
-    <div class="left-col">
+    <div class="header-p2">
+        <span class="header-p2-name">{esc_fn(full_name)}</span>
+        <span class="header-p2-page">Page 2 of 2</span>
+    </div>
+
+    <div class="full-width-col">
 
         <!-- Experience continuation (if any) -->
         {exp_p2_section}
 
         <!-- Projects -->
         {projects_section}
-
-    </div>
-
-    <!-- ═══ PAGE 2 RIGHT ═══ -->
-    <div class="right-col">
 
         <!-- Education -->
         {education_section}

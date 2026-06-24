@@ -34,10 +34,10 @@ class CandidateProfileSchema(BaseModel):
     phone: Optional[str] = Field(None, description = "The candidate's phone number.")
     github_handle: Optional[str] = Field(None, description = "The candidate's github handle.")
     linkedin_handle: Optional[str] = Field(None, description = "The candidate's linkedin profile URL or username.")
-    core_technical_skills: List[str] = Field(description="A comprehensive, clean list of programming languages, tools, frameworks, databases, and cloud services explicitly mentioned.")
-    professional_experience: List[ExperienceSchema] = Field(description="List of internships, trainee positions, or formal engineering roles.")
-    engineered_projects: List[ProjectSchema] = Field(description="List of software applications, extensions, hardware integrations, or AI systems developed.")
-    education: List[EducationDetail]
+    core_technical_skills: List[str] = Field(default_factory=list, description="A comprehensive, clean list of programming languages, tools, frameworks, databases, and cloud services explicitly mentioned.")
+    professional_experience: List[ExperienceSchema] = Field(default_factory=list, description="List of internships, trainee positions, or formal engineering roles.")
+    engineered_projects: List[ProjectSchema] = Field(default_factory=list, description="List of software applications, extensions, hardware integrations, or AI systems developed.")
+    education: List[EducationDetail] = Field(default_factory=list, description="List of education details.")
     certifications: Optional[List[str]] = Field(default_factory=list, description="List of professional certifications, licenses, or courses completed.")
 
 def extract_text_from_pdf(pdf_path: str) -> str:
@@ -64,19 +64,27 @@ def profile_extraction(pdf_path: str) -> Dict[str, Any]:
     raw_text = extract_text_from_pdf(pdf_path)
 
     print(f"Initializing AI model with strict structured output mapping...")
+    # Map custom AWS env vars to standard boto3/botocore vars
+    if os.getenv("AWS_ACCESS_KEY") and not os.getenv("AWS_ACCESS_KEY_ID"):
+        os.environ["AWS_ACCESS_KEY_ID"] = os.getenv("AWS_ACCESS_KEY")
+    if os.getenv("AWS_SECRET_KEY") and not os.getenv("AWS_SECRET_ACCESS_KEY"):
+        os.environ["AWS_SECRET_ACCESS_KEY"] = os.getenv("AWS_SECRET_KEY")
+
+    model_id = os.getenv("MODEL_ID", "us.anthropic.claude-haiku-4-5-20251001-v1:0")
+    region = os.getenv("AWS_REGION", "us-east-1")
+
     llm = init_chat_model(
-        model="llama-3.3-70b-versatile", 
-        model_provider="groq", 
-        temperature = 0, 
-        model_kwargs={"response_format": {"type": "json_object"}}
-        )
+        model=model_id,
+        model_provider="bedrock",
+        temperature=0,
+        max_tokens=4096,
+        region_name=region
+    )
     
-    parser = PydanticOutputParser(pydantic_object=CandidateProfileSchema)
+    structured_llm = llm.with_structured_output(CandidateProfileSchema)
 
     sys_instruction = (
         "You are an elite enterprise technical recruiting engine. Process the raw text of the candidate's resume.\n\n"
-        "Your task is to break down the information into a structured JSON string that aligns perfectly with the formatting instructions below.\n"
-        f"{parser.get_format_instructions()}\n\n"
         "Pay meticulous attention to technical items—including specific cloud-native architectures, "
         "AI orchestration frameworks, specialized databases, development stacks, and systems tooling. "
         "Do not bundle separate systems into a single generic item. Isolate distinct technologies "
@@ -87,14 +95,13 @@ def profile_extraction(pdf_path: str) -> Dict[str, Any]:
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def _invoke_with_retry():
-        return llm.invoke([
+        return structured_llm.invoke([
             ("system", sys_instruction),
             ("user", f"Raw Resume Text Data:\n\n{raw_text}")
         ])
 
     response = _invoke_with_retry()
-    parsed_output = parser.parse(response.content)
-    return parsed_output.model_dump()
+    return response.model_dump()
 
 if __name__ == "__main__":
     

@@ -30,21 +30,29 @@ def gap_analysis(candidate_profile: Dict[str, Any], job_spec: Dict[str, Any]) ->
     Independent execution layer for Phase 3.
     Compares the candidate JSON and job specification JSON using strict JSON Mode.
     """
-    print(f"[1/2] Initializing Gap Analyzer with explicit native JSON Mode formatting...")
-    llm = init_chat_model(
-        model="llama-3.3-70b-versatile",
-        model_provider="groq",
-        temperature=0,
-        model_kwargs={"response_format": {"type": "json_object"}}
-    )
+    print(f"[1/2] Initializing Gap Analyzer with strict structured output mapping...")
+    # Map custom AWS env vars to standard boto3/botocore vars
+    if os.getenv("AWS_ACCESS_KEY") and not os.getenv("AWS_ACCESS_KEY_ID"):
+        os.environ["AWS_ACCESS_KEY_ID"] = os.getenv("AWS_ACCESS_KEY")
+    if os.getenv("AWS_SECRET_KEY") and not os.getenv("AWS_SECRET_ACCESS_KEY"):
+        os.environ["AWS_SECRET_ACCESS_KEY"] = os.getenv("AWS_SECRET_KEY")
 
-    parser = PydanticOutputParser(pydantic_object=GapAnalysisReportSchema)
+    model_id = os.getenv("MODEL_ID", "us.anthropic.claude-haiku-4-5-20251001-v1:0")
+    region = os.getenv("AWS_REGION", "us-east-1")
+
+    llm = init_chat_model(
+        model=model_id,
+        model_provider="bedrock",
+        temperature=0,
+        max_tokens=4096,
+        region_name=region
+    )
+    
+    structured_llm = llm.with_structured_output(GapAnalysisReportSchema)
 
     sys_instruction = (
         "You are an elite enterprise technical assessment engine. Your task is to perform a granular matrix "
         "comparison between a candidate's structured profile and a target job specification.\n\n"
-        "Generate a structured JSON response matching the formatting guidelines below:\n"
-        f"{parser.get_format_instructions()}\n\n"
         "Evaluate the technologies with nuance. Match technologies based on core capability rather than exact string equivalence. "
         "For example, if a job demands a specialized feature set or integration pattern (e.g., 'AWS Bedrock Knowledge Bases and vector indexing') "
         "and the candidate lists foundational expertise with it (e.g., 'AWS Bedrock', 'AWS S3', 'RAG systems'), classify it intelligently "
@@ -56,18 +64,17 @@ def gap_analysis(candidate_profile: Dict[str, Any], job_spec: Dict[str, Any]) ->
         "target_job_specification" : job_spec
     }
 
-    print("[2/2] Emitting comparison matrix payload to Groq gateway...")
+    print("[2/2] Emitting comparison matrix payload to Bedrock...")
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def _invoke_with_retry():
-        return llm.invoke([
+        return structured_llm.invoke([
             ("system", sys_instruction),
             ("user", f"Matrix Evaluation Target:\n\n{json.dumps(user_payload, indent=2)}")
         ])
 
     response = _invoke_with_retry()
-    parsed_output = parser.parse(response.content)
-    return parsed_output.model_dump()
+    return response.model_dump()
 
 if __name__ == "__main__":
     print("=" * 70)

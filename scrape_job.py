@@ -106,38 +106,45 @@ def job_extraction(url: Optional[str] = None, fallback_file: str = "job_descript
         
     truncated_text = raw_job_text[:12000]
 
-    print(f"[2/3] Initializing AI model with explicit native JSON Mode formatting...")
-    llm = init_chat_model(
-        model="openai/gpt-oss-120b",
-        model_provider="groq",
-        temperature=0,
-        model_kwargs={"response_format": {"type": "json_object"}}
-    )
+    print(f"[2/3] Initializing AI model with strict structured output mapping...")
+    # Map custom AWS env vars to standard boto3/botocore vars
+    if os.getenv("AWS_ACCESS_KEY") and not os.getenv("AWS_ACCESS_KEY_ID"):
+        os.environ["AWS_ACCESS_KEY_ID"] = os.getenv("AWS_ACCESS_KEY")
+    if os.getenv("AWS_SECRET_KEY") and not os.getenv("AWS_SECRET_ACCESS_KEY"):
+        os.environ["AWS_SECRET_ACCESS_KEY"] = os.getenv("AWS_SECRET_KEY")
 
-    parser = PydanticOutputParser(pydantic_object = JobSpecificationSchema)
+    model_id = os.getenv("MODEL_ID", "us.anthropic.claude-haiku-4-5-20251001-v1:0")
+    region = os.getenv("AWS_REGION", "us-east-1")
+
+    llm = init_chat_model(
+        model=model_id,
+        model_provider="bedrock",
+        temperature=0,
+        max_tokens=4096,
+        region_name=region
+    )
+    
+    structured_llm = llm.with_structured_output(JobSpecificationSchema)
 
     sys_instruction = (
         "You are an elite enterprise technical sourcing engine. Analyze the provided text of a job posting.\n\n"
-        "Your task is to parse this information into a structured JSON string that aligns perfectly with the formatting instructions below.\n"
-        f"{parser.get_format_instructions()}\n\n"
         "Pay meticulous attention to technical items—including specific cloud-native architectures, "
         "AI orchestration frameworks, specialized databases, development stacks, and systems tooling. "
         "Do not leave raw, unparsed paragraphs inside list fields. Isolate distinct technologies "
         "cleanly into separate, searchable strings to prepare for a semantic matrix matching process."
     )
 
-    print("[3/3] Emitting payload to Groq gateway and executing schema parsing...")
+    print("[3/3] Sending payload to model and applying Pydantic constraints...")
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def _invoke_with_retry():
-        return llm.invoke([
+        return structured_llm.invoke([
             ("system", sys_instruction),
             ("user", f"Raw Scraped Job Content:\n\n{truncated_text}")
         ])
 
     response = _invoke_with_retry()
-    parsed_output = parser.parse(response.content)
-    return parsed_output.model_dump()
+    return response.model_dump()
 
 if __name__ == "__main__":
     TARGET_URL = "https://www.naukri.com/job-listings-senior-artificial-intelligence-machine-learning-engineer-ciklum-pune-chennai-5-to-9-years-090626016861?src=sharedjd&utmCampaign=pwajd&utmSource=share"

@@ -21,22 +21,31 @@ def generate_targeted_interview_questions(candidate_profile: Dict[str, Any], gap
     """
     print("\n[NODE] ---> Executing Targeted Interview Interviewer Node...")
 
-    llm = init_chat_model(
-        model="llama-3.3-70b-versatile",
-        model_provider="groq",
-        temperature=0.4, 
-        model_kwargs={"response_format": {"type": "json_object"}}
-    )
+    # Map custom AWS env vars to standard boto3/botocore vars
+    if os.getenv("AWS_ACCESS_KEY") and not os.getenv("AWS_ACCESS_KEY_ID"):
+        os.environ["AWS_ACCESS_KEY_ID"] = os.getenv("AWS_ACCESS_KEY")
+    if os.getenv("AWS_SECRET_KEY") and not os.getenv("AWS_SECRET_ACCESS_KEY"):
+        os.environ["AWS_SECRET_ACCESS_KEY"] = os.getenv("AWS_SECRET_KEY")
 
-    parser = PydanticOutputParser(pydantic_object=TechnicalInterviewQuestions)
+    model_id = os.getenv("MODEL_ID", "us.anthropic.claude-haiku-4-5-20251001-v1:0")
+    region = os.getenv("AWS_REGION", "us-east-1")
+
+    llm = init_chat_model(
+        model=model_id,
+        model_provider="bedrock",
+        temperature=0.4,
+        max_tokens=4096,
+        region_name=region
+    )
+    
+    structured_llm = llm.with_structured_output(TechnicalInterviewQuestions)
 
     sys_instruction = (
         "You are an elite, professional executive tech career coach. Review the candidate's profile "
         "alongside their structured gap analysis report.\n\n"
         "Your task is to identify the most critical high-severity technical gaps (e.g., missing frameworks, architecture tools). "
-        "Generate a structured JSON response containing EXACTLY 3 professional, direct, and conversational questions. "
-        "You MUST return exactly 3 questions in the list — no more, no less.\n"
-        f"{parser.get_format_instructions()}\n\n"
+        "Generate a structured response containing EXACTLY 3 professional, direct, and conversational questions. "
+        "You MUST return exactly 3 questions in the list — no more, no less.\n\n"
         "Address the candidate by their first name if available. Ask them if they have relevant unlisted experience, "
         "academic project exposure, or specific variations of work that can be contextualized to fill the job requirements. "
         "Keep each question concise and direct — one focused question per gap."
@@ -49,14 +58,13 @@ def generate_targeted_interview_questions(candidate_profile: Dict[str, Any], gap
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def _invoke_with_retry():
-        return llm.invoke([
+        return structured_llm.invoke([
             ("system", sys_instruction),
             ("user", f"Target Interview Context Variables:\n\n{json.dumps(evaluation_payload, indent=2)}")
         ])
 
     response = _invoke_with_retry()
-    parsed_questions = parser.parse(response.content)
-    return parsed_questions.clarification_questions
+    return response.clarification_questions
 
 if __name__ == "__main__":
     print("=" * 70)
