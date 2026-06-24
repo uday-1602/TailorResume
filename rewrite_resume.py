@@ -14,13 +14,14 @@ if os.getenv("AWS_ACCESS_KEY") and not os.getenv("AWS_ACCESS_KEY_ID"):
 if os.getenv("AWS_SECRET_KEY") and not os.getenv("AWS_SECRET_ACCESS_KEY"):
     os.environ["AWS_SECRET_ACCESS_KEY"] = os.getenv("AWS_SECRET_KEY")
 
-def execute_resume_rewrite(original_profile: Dict[str, Any], job_spec: Dict[str, Any], gap_report: Dict[str, Any], user_answers: Dict[str, str]) -> str:
+def execute_resume_rewrite(original_profile: Dict[str, Any], job_spec: Dict[str, Any], gap_report: Dict[str, Any], user_answers: Dict[str, str], page_limit: int = 1) -> str:
     """
     Consumes candidate data, target job specifications, and conversational answers.
-    Generates a high-density, strictly 1-page LaTeX document dynamically mapping
-    all profile fields including contact details, experience, and education.
+    Generates a dynamically-paged LaTeX resume:
+      page_limit=1 for junior/mid candidates (< 5 years experience)
+      page_limit=2 for senior candidates (>= 5 years experience)
     """
-    print("\n[NODE] ---> Executing Dynamic 1-Page LaTeX Engine...")
+    print(f"\n[NODE] ---> Executing Dynamic {page_limit}-Page LaTeX Engine...")
 
     model_id = os.getenv("MODEL_ID", "us.anthropic.claude-haiku-4-5-20251001-v1:0")
     region = os.getenv("AWS_REGION", "us-east-1")
@@ -65,33 +66,86 @@ def execute_resume_rewrite(original_profile: Dict[str, Any], job_spec: Dict[str,
         contact_block_lines.append(f"    {contact_row2}\n")
     contact_block = "".join(contact_block_lines)
 
-    # --- Fixed preamble block (hardcoded, must be output verbatim) ---
-    preamble = (
-        "\\documentclass[10pt,letterpaper]{article}\n"
-        "\\usepackage[top=0.4in,bottom=0.4in,left=0.5in,right=0.5in]{geometry}\n"
-        "\\usepackage[hidelinks]{hyperref}\n"
-        "\\usepackage{enumitem}\n"
-        "\\usepackage{titlesec}\n"
-        "\\usepackage{parskip}\n"
-        "\\setlength{\\parskip}{0pt}\n"
-        "\\linespread{1.04}\n"
-        "\\setlist[itemize]{topsep=1pt, itemsep=0pt, parsep=0pt, partopsep=0pt, leftmargin=1.2em}\n"
-        "\\titleformat{\\section}{\\large\\bfseries}{}{0em}{}[\\titlerule]\n"
-        "\\titlespacing{\\section}{0pt}{5pt}{2pt}\n"
-        "\\begin{document}\n"
-        "\\begin{center}\n"
-        f"    {{\\LARGE \\textbf{{{full_name}}}}}\\\\\n"
-        "    \\vspace{1.5mm}\n"
-        f"{contact_block}"
-        "\\end{center}\n"
-        "\\vspace{-2mm}"
+    # --- Preamble: tight for 1-page, relaxed for 2-page ---
+    if page_limit == 2:
+        preamble = (
+            "\\documentclass[10.5pt,letterpaper]{article}\n"
+            "\\usepackage[top=0.55in,bottom=0.55in,left=0.6in,right=0.6in]{geometry}\n"
+            "\\usepackage[hidelinks]{hyperref}\n"
+            "\\usepackage{enumitem}\n"
+            "\\usepackage{titlesec}\n"
+            "\\usepackage{parskip}\n"
+            "\\setlength{\\parskip}{0pt}\n"
+            "\\linespread{1.15}\n"
+            "\\setlist[itemize]{topsep=2pt, itemsep=1pt, parsep=0pt, partopsep=0pt, leftmargin=1.4em}\n"
+            "\\titleformat{\\section}{\\large\\bfseries}{}{0em}{}[\\titlerule]\n"
+            "\\titlespacing{\\section}{0pt}{8pt}{4pt}\n"
+            "\\begin{document}\n"
+            "\\begin{center}\n"
+            f"    {{\\LARGE \\textbf{{{full_name}}}}}\\\\\n"
+            "    \\vspace{1.5mm}\n"
+            f"{contact_block}"
+            "\\end{center}\n"
+            "\\vspace{-2mm}"
+        )
+    else:
+        preamble = (
+            "\\documentclass[10pt,letterpaper]{article}\n"
+            "\\usepackage[top=0.4in,bottom=0.4in,left=0.5in,right=0.5in]{geometry}\n"
+            "\\usepackage[hidelinks]{hyperref}\n"
+            "\\usepackage{enumitem}\n"
+            "\\usepackage{titlesec}\n"
+            "\\usepackage{parskip}\n"
+            "\\setlength{\\parskip}{0pt}\n"
+            "\\linespread{1.04}\n"
+            "\\setlist[itemize]{topsep=1pt, itemsep=0pt, parsep=0pt, partopsep=0pt, leftmargin=1.2em}\n"
+            "\\titleformat{\\section}{\\large\\bfseries}{}{0em}{}[\\titlerule]\n"
+            "\\titlespacing{\\section}{0pt}{5pt}{2pt}\n"
+            "\\begin{document}\n"
+            "\\begin{center}\n"
+            f"    {{\\LARGE \\textbf{{{full_name}}}}}\\\\\n"
+            "    \\vspace{1.5mm}\n"
+            f"{contact_block}"
+            "\\end{center}\n"
+            "\\vspace{-2mm}"
+        )
+
+    # --- Dynamic prompt parts based on page_limit ---
+    page_label = "SINGLE-PAGE" if page_limit == 1 else "TWO-PAGE"
+    exp_count = "1 to 2" if page_limit == 1 else "2 to 4"
+    exp_bullets = "3-5" if page_limit == 1 else "4-5"
+    exp_newpage_note = (
+        "  Omit the least relevant experience entries if space is tight.\n"
+        if page_limit == 1 else
+        "  You have a 2-page budget -- preserve ALL significant experience entries.\n"
+        "  Immediately before \\section*{Projects}, insert exactly one blank line then: \\newpage\n"
+        "  This splits the document cleanly: Projects and Education begin on Page 2.\n"
+    )
+    proj_count = "2 to 3" if page_limit == 1 else "3 to 4"
+    page_rule = (
+        "RULE 8 -- ONE PAGE GUARANTEE:\n"
+        "  The entire document MUST fit on exactly one page when compiled.\n"
+        "  If running long: reduce bullets to 2 per block, trim word count, drop least relevant project, or shorten the skills section."
+        if page_limit == 1 else
+        "RULE 8 -- TWO PAGE DOCUMENT:\n"
+        "  The resume MUST span exactly 2 pages.\n"
+        "  Page 1: Professional Summary, Technical Skills, Certifications, Experience.\n"
+        "  Page 2: Projects, Education.\n"
+        "  The \\newpage command before \\section*{Projects} (in RULE 4) creates the clean page split.\n"
+        "  Fill both pages with substantial professional content. Do NOT compress unnecessarily."
+    )
+    page_checklist = (
+        "[ ] Document fits on exactly 1 page"
+        if page_limit == 1 else
+        "[ ] \\newpage appears immediately before \\section*{Projects}\n"
+        "[ ] Document spans exactly 2 pages (Summary/Skills/Certs/Experience on Page 1, Projects/Education on Page 2)"
     )
 
-    sys_instruction = f"""You are an expert technical resume writer specializing in AI/ML engineering roles.
-Your task is to generate a COMPLETE, COMPILABLE, single-page LaTeX resume for the candidate using the provided data.
+    sys_instruction = f"""You are an expert technical resume writer.
+Your task is to generate a COMPLETE, COMPILABLE, {page_label} LaTeX resume for the candidate using the provided data.
 
 =====================================================================
-PART 1 — OUTPUT FORMAT (MANDATORY, NON-NEGOTIABLE)
+PART 1 -- OUTPUT FORMAT (MANDATORY, NON-NEGOTIABLE)
 =====================================================================
 
 Your output MUST:
@@ -100,40 +154,63 @@ Your output MUST:
 - Contain NO markdown fences (no ```latex), NO explanatory text, NO comments outside of the LaTeX.
 - Be 100% compilable by pdflatex without errors.
 
-MANDATORY PREAMBLE (copy verbatim, then continue from \\section*{{Professional Summary}}):
+MANDATORY PREAMBLE (copy verbatim, then continue with the sections below):
 {preamble}
 
 =====================================================================
-PART 2 — CONTENT RULES
+PART 2 -- CONTENT RULES
 =====================================================================
 
-RULE 1 — PROFESSIONAL SUMMARY (2-3 sentences, highly tailored to the target job description):
+SECTION ORDER (MANDATORY -- output sections in EXACTLY this sequence):
+  1. \\section*{{Professional Summary}}
+  2. \\section*{{Technical Skills}}
+  3. \\section*{{Certifications}}   <- only if certifications exist; otherwise skip
+  4. \\section*{{Experience}}
+  5. \\section*{{Projects}}
+  6. \\section*{{Education}}
+  DO NOT deviate from this order. Recruiters scan resumes in this exact sequence.
+
+RULE 1 -- PROFESSIONAL SUMMARY (2-3 sentences, highly tailored to the target job description):
   Create a highly compelling, custom professional summary that immediately frames the candidate as the ideal fit for the target job.
   Guidelines:
   - Address Target Value Proposition: Directly connect the candidate's background to the core themes and critical keywords of the target job description (e.g., if the job emphasizes "data governance, product thinking, or AI/ML enablement", align their experience with these areas).
-  - Position Identity & Seniority: Frame the candidate's role title and identity to match the scope and expectations of the target position (e.g. a Data Architect applying for a VP Lead role can be positioned as a "Senior Data Architect & Engineering Lead" or "Data Lead specializing in governance...").
-  - Preserve Original Highlights: If their original resume/profile explicitly mentions their years of experience (e.g. "3+ years", "16+ years") or important industry domains (e.g. "for one of the biggest NBFC companies"), you MUST preserve these details in your summary.
+  - Position Identity & Seniority: Frame the candidate's role title and identity to match the scope and expectations of the target position (e.g. a Data Architect applying for a VP Lead role can be positioned as a "Senior Data Architect & Engineering Lead").
+  - Industry Verticals: If the candidate has worked in specific industry sectors (e.g. "NBFC", "banking", "fintech", "healthcare", "manufacturing", "e-commerce"), explicitly name those sectors in the summary. This is a key signal recruiters look for.
+  - Preserve Original Highlights: If their original resume/profile explicitly mentions years of experience (e.g. "3+ years", "16+ years") or important industry domains, you MUST preserve these details.
   - Keep it Truthful: Do NOT fabricate experiences or technical tools they do not possess, but frame what they *do* possess using the vocabulary of the target job description.
-  End the summary block with a single \\ (not \\\\).
+  End the summary block with a single \\ (not \\\\ ).
 
-RULE 2 — TECHNICAL SKILLS:
+RULE 2 -- TECHNICAL SKILLS:
   Organize into 4-5 bold subcategories (e.g., \\textbf{{Languages:}}, \\textbf{{AI/ML:}}, \\textbf{{Cloud:}}, \\textbf{{Databases:}}, \\textbf{{Web \\& Tools:}}).
   Pull skills ONLY from candidate's profile or user answers. Match them logically.
   Each line MUST end with \\\\ (double backslash).
 
-RULE 3 — EXPERIENCE (1 to 2 experience entries, most recent first):
-  Include 1 to 2 experience entries (most recent first). Omit least relevant if space is tight.
-  Format EXACTLY as:
+RULE 3 -- CERTIFICATIONS (place immediately after Technical Skills, before Experience):
+  If certifications exist in the profile data OR were mentioned in user answers, include:
+    \\section*{{Certifications}}
+    \\begin{{itemize}}
+      \\item Certification Name
+    \\end{{itemize}}
+  If none exist, OMIT this section entirely. Do NOT invent or assume certifications.
+  IMPORTANT: Recruiters prioritize certifications when required by the JD. Place this section right after Skills.
+
+RULE 4 -- EXPERIENCE ({exp_count} experience entries, most recent first):
+{exp_newpage_note}  Format EXACTLY as:
     \\textbf{{Organization}} \\hfill Start -- End\\\\
     \\textit{{Role Title}}
     \\begin{{itemize}}
       \\item bullet
       \\item bullet
     \\end{{itemize}}
-  Use 3-5 bullets per entry. Do NOT arbitrarily truncate or delete bullets if the candidate has them in their original profile; preserve their detailed achievements (up to 5 bullets per role) so the page is fully and professionally utilized. Each bullet must be under 20 words, action-verb first.
-  Weave in required job skills and keywords from the job description (e.g., "data lineage", "metadata", "governance control", "ML data pipelines", "streaming/asynchronous ingestion") ONLY where the candidate has genuine technical exposure. Frame their real work using the target job's vocabulary.
+  Use {exp_bullets} bullets per entry. Do NOT arbitrarily truncate bullets from the original profile. Each bullet under 20 words, action-verb first.
+  Weave in required job skills and keywords from the job description ONLY where the candidate has genuine technical exposure. Frame their real work using the target job's vocabulary.
+  Career Progression Framing (IMPORTANT for recruiters):
+  - Frame bullets to show growth trajectory and increasing scope over time.
+  - Where truthfully present in the profile: mention team sizes, direct reports, or cross-functional reach (e.g. "Led a 5-member data engineering team").
+  - Use increasingly senior action verbs for more recent roles: "Implemented" -> "Architected" -> "Spearheaded".
+  - Highlight business scale (users, transactions, data volume) ONLY if mentioned in the source profile. Do NOT fabricate metrics.
 
-RULE 4 — PROJECTS (2 to 3 entries, most relevant first):
+RULE 5 -- PROJECTS ({proj_count} entries, most relevant first):
   Select projects with the HIGHEST overlap to the target job's required skills. Omit unrelated ones.
   Format EXACTLY as:
     \\textbf{{Project Name}} $|$ \\textit{{Tech1, Tech2, Tech3}}
@@ -142,72 +219,55 @@ RULE 4 — PROJECTS (2 to 3 entries, most relevant first):
       \\item bullet
     \\end{{itemize}}
   Use 2-3 bullets per project. Each bullet under 20 words, action-verb first.
-  Actively map and frame the project details using the target job's vocabulary (e.g. data quality rules as "data quality framework", data indexing as "training feature datasets" where technically accurate).
+  Actively map and frame the project details using the target job's vocabulary.
   DO NOT fabricate metrics, percentages, star counts, or document volumes not present in the source data. Describe impact qualitatively instead (e.g., "enabling fast semantic retrieval", "streamlining knowledge access").
 
-RULE 5 — CERTIFICATIONS:
-  If certifications exist in the profile data OR were mentioned in user answers, include:
-    \\section*{{Certifications}}
-    \\begin{{itemize}}
-      \\item Certification Name
-    \\end{{itemize}}
-  If none exist, OMIT this section entirely.
-
-RULE 6 — EDUCATION:
+RULE 6 -- EDUCATION:
   List ALL education entries from the profile data. Format EXACTLY as:
     \\textbf{{Institution Name}} \\hfill Timeline\\\\
     Degree -- CGPA: X/10\\\\   (or Degree -- Percentage: XX\\%\\\\)
   CRITICAL FORMATTING:
   - Separate entries with \\vspace{{3pt}} (no blank line before or after this command).
-  - The \\vspace{{3pt}} line must be IMMEDIATELY followed by \\textbf on the next line — NO blank lines.
+  - The \\vspace{{3pt}} line must be IMMEDIATELY followed by \\textbf on the next line -- NO blank lines.
   - Every degree/grade line MUST end with \\\\ (double backslash).
   - Do NOT use \\item or itemize here.
   - Do NOT leave ANY blank lines inside the Education section.
   Always include CGPA or percentage if present in the data.
-  Example of CORRECT Education formatting:
-    \\section*{{Education}}
-    \\textbf{{University Name}} \\hfill 2020 -- 2024\\\\
-    B.Tech in Computer Science -- CGPA: 8.5/10\\\\
-    \\vspace{{3pt}}
-    \\textbf{{School Name}} \\hfill Completed 2020\\\\
-    HSC -- Percentage: 85\\%\\\\
 
-RULE 7 — LATEX COMPLIANCE (CRITICAL):
+RULE 7 -- LATEX COMPLIANCE (CRITICAL):
   - Every & must be \\&
   - Every % must be \\%
   - Every section must open with \\section*{{...}} and contain valid LaTeX content.
   - Every \\begin{{itemize}} must have a matching \\end{{itemize}}.
   - The last line must be \\end{{document}} with nothing after it.
-  - Do NOT use em-dashes (—), curly quotes (""), or any non-ASCII character directly. Use LaTeX equivalents: -- for en-dash, --- for em-dash, \\textquoteleft etc.
+  - Do NOT use em-dashes (--), curly quotes, or any non-ASCII character directly. Use LaTeX equivalents.
 
-RULE 8 — ONE PAGE GUARANTEE:
-  The entire document MUST fit on exactly one page when compiled.
-  If you are running long: reduce bullets to 2 per block, trim bullet word count, drop the least relevant project, or shorten the skills section.
+{page_rule}
 
-RULE 9 — TRUTHFULNESS & SKILL INTEGRITY (MANDATORY):
+RULE 9 -- TRUTHFULNESS & SKILL INTEGRITY (MANDATORY):
   - Do NOT assume, fabricate, or hallucinate skills that are not explicitly in the candidate's profile data or conversational answers.
-  - You MUST NOT include any skills or technologies anywhere on the resume (not in the professional summary, skills list, experience, or projects) if they are missing from the candidate's profile or have not been confirmed in the conversational answers.
-  - Instead, focus exclusively on the skills they actually possess or have confirmed exposure to.
+  - You MUST NOT include any skills or technologies anywhere on the resume if they are missing from the candidate's profile or have not been confirmed in the conversational answers.
 
-RULE 10 — VOCABULARY DIVERSITY (MANDATORY):
+RULE 10 -- VOCABULARY DIVERSITY (MANDATORY):
   Never repeat the same action verbs (such as 'implemented', 'designed', 'developed', 'led') more than twice across the entire resume. Use a rich and diverse set of action verbs (e.g., 'architected', 'engineered', 'streamlined', 'orchestrated', 'executed', 'formulated', 'spearheaded', 'pioneered', 'optimized', 'modernized').
 
 =====================================================================
-PART 3 — SELF-VALIDATION CHECKLIST (run before outputting)
+PART 3 -- SELF-VALIDATION CHECKLIST (run before outputting)
 =====================================================================
 
 Before outputting, verify:
-[ ] Output starts with \\documentclass{{10pt,letterpaper}}{{article}}
+[ ] Output starts with \\documentclass and the preamble copied verbatim
 [ ] Output ends with \\end{{document}} and nothing after
 [ ] No markdown code fences present
 [ ] Every \\begin{{itemize}} has a closing \\end{{itemize}}
 [ ] No fabricated numeric metrics
-[ ] Professional Summary is 2 specific sentences (not generic)
+[ ] Professional Summary mentions industry vertical if applicable (2-3 sentences)
+[ ] Certifications section appears AFTER Skills and BEFORE Experience (if certs exist)
 [ ] Education has CGPA/percentage appended
 [ ] All & escaped as \\& and all % escaped as \\%
 [ ] \\end{{document}} is the very last line
-[ ] Absolutely NO mentions of skills or technologies not present in the candidate profile or user answers
-[ ] Only skills and technologies present in the candidate profile or user answers are included (no fabrication)
+[ ] Only skills and technologies present in the candidate profile or user answers are included
+{page_checklist}
 """
 
     high_severity_gaps = [

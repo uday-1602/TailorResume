@@ -36,6 +36,7 @@ def execute_resume_rewrite_modern(
     gap_report: Dict[str, Any],
     user_answers: Dict[str, str],
     output_pdf_path: str,
+    page_limit: int = 1,
 ) -> str:
     """
     Generate a modern two-column resume PDF using HTML + Playwright (headless Chromium).
@@ -46,18 +47,19 @@ def execute_resume_rewrite_modern(
         gap_report:       Gap analysis output.
         user_answers:     Chatbot Q&A from the interview step.
         output_pdf_path:  Absolute path where the final PDF should be written.
+        page_limit:       1 for junior/mid (< 5 years), 2 for senior (>= 5 years).
 
     Returns:
         JSON string of the generated resume content
         (stored in final_latex_source for graph state compatibility).
     """
-    print("\n[NODE] ---> Executing Modern HTML Resume Engine...")
+    print(f"\n[NODE] ---> Executing Modern HTML Resume Engine (page_limit={page_limit})...")
 
     # Step 1 — LLM generates structured resume content as JSON
-    resume_data = _generate_resume_json(original_profile, job_spec, gap_report, user_answers)
+    resume_data = _generate_resume_json(original_profile, job_spec, gap_report, user_answers, page_limit)
 
     # Step 2 — Build a standalone HTML document
-    html_content = _build_html(resume_data, original_profile)
+    html_content = _build_html(resume_data, original_profile, page_limit)
 
     # Step 3 — Render HTML → PDF via Playwright (headless Chromium, works on Windows without GTK)
     _html_to_pdf(html_content, output_pdf_path)
@@ -98,6 +100,7 @@ def _generate_resume_json(
     job_spec: Dict[str, Any],
     gap_report: Dict[str, Any],
     user_answers: Dict[str, str],
+    page_limit: int = 1,
 ) -> Dict[str, Any]:
     """Call Bedrock Claude to generate resume content as a structured JSON object."""
 
@@ -118,7 +121,18 @@ def _generate_resume_json(
     ]
     strategic_rec = gap_report.get("strategic_recommendation", "")
 
-    sys_instruction = """\
+    page_label = "single-page" if page_limit == 1 else "two-page"
+    exp_count_rule = "1-2 most recent entries" if page_limit == 1 else "2-4 most recent entries (you have 2 pages, do NOT truncate)"
+    exp_bullets_rule = "3-5 bullets" if page_limit == 1 else "4-5 bullets"
+    proj_count_rule = "2-3 most relevant" if page_limit == 1 else "3-4 most relevant (use the extra page budget)"
+    page_budget_rule = (
+        "RULE 8 — SINGLE PAGE: Keep all content concise. Under 18 words per bullet. Omit less relevant entries if needed."
+        if page_limit == 1 else
+        "RULE 8 — TWO PAGES: You have a 2-page budget. Fill it with substantial professional content. "
+        "Do NOT compress or cut entries unnecessarily. Aim for thorough coverage of all experience."
+    )
+
+    sys_instruction = f"""\
 You are an expert technical resume writer. Your task is to generate tailored resume content \
 as a SINGLE valid JSON object — no markdown, no code fences, no explanation.
 
@@ -128,80 +142,84 @@ OUTPUT FORMAT — STRICTLY VALID JSON, NOTHING ELSE
 
 Return ONLY this JSON structure (all keys required):
 
-{
-  "current_role_title": "<most recent role title or student designation, e.g. 'Management Lead'>",
+{{
+  "current_role_title": "<most recent role title, e.g. 'Senior Data Engineer'>",
   "summary": "<2-3 sentences, see RULE 1 below>",
   "skills": [
-    {"category": "<Category Name>", "items": ["<Skill1>", "<Skill2>", ...]},
+    {{"category": "<Category Name>", "items": ["<Skill1>", "<Skill2>", ...]}},
     ...
   ],
   "experience": [
-    {
+    {{
       "organization": "<Organization Name>",
       "role": "<Role Title>",
       "period": "<e.g. Sep 2025 – Present>",
       "bullets": ["<action-verb bullet>", ...]
-    },
+    }},
     ...
   ],
   "projects": [
-    {
+    {{
       "name": "<Project Name>",
       "tech": ["<Tech1>", "<Tech2>", ...],
       "bullets": ["<action-verb bullet>", ...]
-    },
+    }},
     ...
   ],
   "education": [
-    {
+    {{
       "institution": "<Institution Name>",
       "degree": "<Degree / Course Name>",
       "period": "<e.g. Expected Jun 2027>",
       "score": "<e.g. CGPA: 8.68/10 or Percentage: 85%>"
-    },
+    }},
     ...
   ],
   "certifications": ["<Cert Name>", ...]
-}
+}}
 
 =======================================================================
-CONTENT RULES
+CONTENT RULES (generating a {page_label} resume)
 =======================================================================
 
 RULE 1 — SUMMARY (2-3 sentences, highly tailored to the target job description):
   Create a highly compelling, custom professional summary that immediately frames the candidate as the ideal fit for the target job.
   Guidelines:
-  - Address Target Value Proposition: Directly connect the candidate's background to the core themes and critical keywords of the target job description (e.g., if the job emphasizes "data governance, product thinking, or AI/ML enablement", align their experience with these areas).
-  - Position Identity & Seniority: Frame the candidate's role title and identity to match the scope and expectations of the target position (e.g. a Data Architect applying for a VP Lead role can be positioned as a "Senior Data Architect & Engineering Lead" or "Data Lead specializing in governance...").
-  - Preserve Original Highlights: If their original resume/profile explicitly mentions their years of experience (e.g. "3+ years", "16+ years") or important industry domains (e.g. "for one of the biggest NBFC companies"), you MUST preserve these details in your summary.
-  - Keep it Truthful: Do NOT fabricate experiences or technical tools they do not possess, but frame what they *do* possess using the vocabulary of the target job description.
+  - Address Target Value Proposition: Directly connect the candidate's background to the core themes and critical keywords of the target job description.
+  - Position Identity & Seniority: Frame the candidate's role title and identity to match the scope and expectations of the target position.
+  - Industry Verticals: If the candidate has worked in specific industry sectors (e.g. "NBFC", "banking", "fintech", "healthcare", "manufacturing"), explicitly name those sectors in the summary. This is a key signal recruiters look for.
+  - Preserve Original Highlights: If their original resume/profile explicitly mentions years of experience (e.g. "3+ years", "16+ years") or important industry domains, you MUST preserve these details.
+  - Keep it Truthful: Do NOT fabricate experiences or technical tools they do not possess.
 
 RULE 2 — SKILLS (4-5 categories):
   Pull skills ONLY from core_technical_skills AND skills the candidate confirmed in their answers.
   DO NOT include any skill not present in the candidate profile or user answers.
 
-RULE 3 — EXPERIENCE (1-2 most recent entries):
-  Use 3-5 bullets per entry. Do NOT arbitrarily truncate or delete bullets if the candidate has them in their original profile; preserve their detailed achievements (up to 5 bullets per role) so the page is fully and professionally utilized. Each bullet: action-verb first, under 20 words.
-  Weave in required job skills and keywords from the job description (e.g., "data lineage", "metadata", "governance control", "ML data pipelines", "streaming/asynchronous ingestion") ONLY where the candidate has genuine technical exposure. Frame their real work using the target job's vocabulary.
+RULE 3 — EXPERIENCE ({exp_count_rule}):
+  Use {exp_bullets_rule} per entry. Do NOT arbitrarily truncate or delete bullets from the original profile. Each bullet: action-verb first, under 20 words.
+  Weave in required job skills and keywords from the job description ONLY where the candidate has genuine technical exposure.
+  Career Progression Framing (IMPORTANT for recruiters):
+  - Frame bullets to show growth trajectory and increasing scope over time.
+  - Where truthfully present: mention team sizes, direct reports, cross-functional reach (e.g. "Led a 5-member data engineering team").
+  - Use increasingly senior action verbs for more recent roles: "Implemented" -> "Architected" -> "Spearheaded".
+  - Highlight business scale (users, transactions, data volumes) ONLY if mentioned in the source profile. Do NOT fabricate metrics.
 
-RULE 4 — PROJECTS (2-3 most relevant):
+RULE 4 — PROJECTS ({proj_count_rule}):
   Select projects with the HIGHEST overlap to the target job's required skills. Omit unrelated ones.
   Use 2-3 bullets per project. Each bullet under 20 words, action-verb first.
-  Actively map and frame the project details using the target job's vocabulary (e.g. data quality rules as "data quality framework", data indexing as "training feature datasets" where technically accurate).
-  DO NOT fabricate metrics, percentages, or counts not in the source data. Describe impact qualitatively instead (e.g., "enabling fast semantic retrieval", "streamlining knowledge access") when metrics are not present in source data.
+  Actively map and frame the project details using the target job's vocabulary.
+  DO NOT fabricate metrics, percentages, or counts not in the source data. Describe impact qualitatively instead.
 
 RULE 5 — EDUCATION: List ALL entries from the profile. Include CGPA or percentage if present.
 
-RULE 6 — CERTIFICATIONS: Include if in profile or user answers. Empty array [] if none.
+RULE 6 — CERTIFICATIONS: Include ALL certifications from profile or user answers. \
+Recruiters scan for certs early — do not omit them. Empty array [] only if truly none exist.
 
 RULE 7 — TRUTHFULNESS (MANDATORY):
   NEVER include skills, technologies, or achievements not explicitly in the candidate's profile \
 or confirmed via user answers. Every skill chip that appears must be genuinely owned by the candidate.
 
-RULE 8 — SENIOR / EXPERIENCED PROFILES (CRITICAL):
-  If the candidate is highly experienced (e.g. 5+ years of experience), focus heavily on professional \
-experience and projects rather than academic items. Bullet descriptions must be extremely concise, \
-impactful, and brief (under 18 words) so they can fit on a single page without spilling over.
+{page_budget_rule}
 
 RULE 9 — VOCABULARY DIVERSITY (MANDATORY):
   Never repeat the same action verbs (such as 'implemented', 'designed', 'developed', 'led') more than twice across the entire resume. Use a rich and diverse set of action verbs (e.g., 'architected', 'engineered', 'streamlined', 'orchestrated', 'executed', 'formulated', 'spearheaded', 'pioneered', 'optimized', 'modernized').
@@ -266,12 +284,13 @@ def _esc(text: str) -> str:
     )
 
 
-def _build_html(data: Dict[str, Any], profile: Dict[str, Any]) -> str:
+def _build_html(data: Dict[str, Any], profile: Dict[str, Any], page_limit: int = 1) -> str:
     """
     Construct a complete, self-contained HTML document styled as a
-    modern two-column resume. WeasyPrint will render this to A4 PDF.
+    modern two-column resume. Playwright renders this to A4 PDF.
+    For page_limit=2, two explicit A4-height page divs are emitted.
     """
-    # Calculate total text density to dynamically choose standard vs compact layout
+    # Compact layout only applies on page_limit=1 when content is dense
     exp_count = len(data.get("experience", []))
     proj_count = len(data.get("projects", []))
     edu_count = len(data.get("education", []))
@@ -280,7 +299,7 @@ def _build_html(data: Dict[str, Any], profile: Dict[str, Any]) -> str:
     proj_bullets = sum(len(proj.get("bullets", [])) for proj in data.get("projects", []))
     
     total_blocks = exp_count + proj_count + edu_count + (1 if cert_count > 0 else 0) + exp_bullets + proj_bullets
-    is_compact = total_blocks >= 26
+    is_compact = (total_blocks >= 26) if page_limit == 1 else False
 
     # --- Contact info comes from raw profile (not LLM) to prevent hallucination ---
     full_name = (profile.get("full_name") or "CANDIDATE NAME").upper()
@@ -381,7 +400,7 @@ def _build_html(data: Dict[str, Any], profile: Dict[str, Any]) -> str:
                 </div>
             </div>"""
 
-    # --- Certifications (left column, optional) ---
+    # --- Certifications (right column, optional) ---
     certs = [c for c in data.get("certifications", []) if c]
     certs_section = ""
     if certs:
@@ -668,6 +687,22 @@ body {{
     margin: 2px 3px;
 }}
 
+/* ── Prevent entries splitting across pages ── */
+.exp-entry, .project-entry, .edu-entry, .skill-category {{
+    break-inside: avoid;
+    page-break-inside: avoid;
+}}
+
+/* ── 2-page: page break between page divs ── */
+.page {{
+    page-break-after: always;
+    break-after: page;
+}}
+.page:last-child {{
+    page-break-after: avoid;
+    break-after: avoid;
+}}
+
 /* ── Compact layout overrides ── */
 .page.compact {{
     font-size: 9pt;
@@ -784,14 +819,38 @@ body {{
 </style>
 </head>
 <body>
-<div class="page clearfix {"compact" if is_compact else ""}">
+{_build_page_html(
+    page_limit, is_compact,
+    full_name, role_title, contacts_html, summary_text,
+    data, skills_section, certs_section, education_section,
+    experience_html, projects_section,
+    _esc
+)}
+</body>
+</html>"""
+
+
+def _build_page_html(
+    page_limit, is_compact,
+    full_name, role_title, contacts_html, summary_text,
+    data, skills_section, certs_section, education_section,
+    experience_html, projects_section,
+    esc_fn,
+) -> str:
+    """Build the page body HTML based on page_limit."""
+    compact_class = "compact" if is_compact else ""
+
+    if page_limit == 1:
+        # ── Single page: right col = Skills → Certs → Education ──────────────
+        return f"""
+<div class="page clearfix {compact_class}">
 
     <!-- ═══ LEFT COLUMN ═══ -->
     <div class="left-col">
 
         <!-- Header -->
         <div class="header">
-            <div class="candidate-name">{_esc(full_name)}</div>
+            <div class="candidate-name">{esc_fn(full_name)}</div>
             {f'<div class="candidate-role">{role_title}</div>' if role_title else ''}
             <div class="contacts">{contacts_html}</div>
         </div>
@@ -803,7 +862,7 @@ body {{
         </div>
 
         <!-- Experience -->
-        {experience_section}
+        <div class="section"><div class="section-title">Experience</div>{experience_html}</div>
 
         <!-- Projects -->
         {projects_section}
@@ -816,8 +875,79 @@ body {{
         <!-- Skills -->
         {skills_section}
 
+        <!-- Certifications (before Education per recruiter priority) -->
+        {certs_section}
+
         <!-- Education -->
         {education_section}
+
+    </div>
+
+</div>"""
+
+    else:
+        # ── Two pages: split experience 1-2 on page 1, rest + projects on page 2 ──
+        all_exp = data.get("experience", [])
+        exp_p1 = all_exp[:2]
+        exp_p2 = all_exp[2:]
+
+        def _exp_html(entries):
+            html = ""
+            for exp in entries:
+                org = esc_fn(exp.get("organization") or "")
+                role = esc_fn(exp.get("role") or "")
+                period = esc_fn(exp.get("period") or "")
+                bullets = "".join(f"<li>{esc_fn(b)}</li>" for b in exp.get("bullets", []) if b)
+                if org:
+                    html += f"""
+            <div class="exp-entry">
+                <div class="exp-header">
+                    <span class="exp-org">{org}</span>
+                    <span class="exp-period">{period}</span>
+                </div>
+                <div class="exp-role-wrap">
+                    <div class="exp-role">{role}</div>
+                </div>
+                {"<ul class='bullets'>" + bullets + "</ul>" if bullets else ""}
+            </div>"""
+            return html
+
+        exp_p1_html = _exp_html(exp_p1)
+        exp_p2_html = _exp_html(exp_p2)
+        exp_p2_section = (
+            f'<div class="section"><div class="section-title">Experience (cont.)</div>{exp_p2_html}</div>'
+            if exp_p2_html else ""
+        )
+
+        return f"""
+<div class="page clearfix {compact_class}">
+
+    <!-- ═══ PAGE 1 LEFT ═══ -->
+    <div class="left-col">
+
+        <!-- Header -->
+        <div class="header">
+            <div class="candidate-name">{esc_fn(full_name)}</div>
+            {f'<div class="candidate-role">{role_title}</div>' if role_title else ''}
+            <div class="contacts">{contacts_html}</div>
+        </div>
+
+        <!-- Summary -->
+        <div class="section">
+            <div class="section-title">Summary</div>
+            <div class="summary-text">{summary_text}</div>
+        </div>
+
+        <!-- Experience (first 2 entries) -->
+        <div class="section"><div class="section-title">Experience</div>{exp_p1_html}</div>
+
+    </div>
+
+    <!-- ═══ PAGE 1 RIGHT ═══ -->
+    <div class="right-col">
+
+        <!-- Skills -->
+        {skills_section}
 
         <!-- Certifications -->
         {certs_section}
@@ -825,5 +955,28 @@ body {{
     </div>
 
 </div>
-</body>
-</html>"""
+
+<!-- ═══ PAGE 2 ═══ -->
+<div class="page clearfix {compact_class}">
+
+    <!-- ═══ PAGE 2 LEFT ═══ -->
+    <div class="left-col">
+
+        <!-- Experience continuation (if any) -->
+        {exp_p2_section}
+
+        <!-- Projects -->
+        {projects_section}
+
+    </div>
+
+    <!-- ═══ PAGE 2 RIGHT ═══ -->
+    <div class="right-col">
+
+        <!-- Education -->
+        {education_section}
+
+    </div>
+
+</div>"""
+

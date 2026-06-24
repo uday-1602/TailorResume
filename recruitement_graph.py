@@ -1,5 +1,7 @@
 import os
+import re
 import json
+from datetime import datetime
 from typing import Dict, Any, List, TypedDict, Optional
 from dotenv import load_dotenv
 from langgraph.graph import StateGraph, START, END
@@ -87,6 +89,53 @@ def interviewer_node(state: RecruiterGraphState) -> Dict[str, Any]:
 
     return {"interview_questions": questions_list}
 
+def _calculate_page_limit(profile: Dict[str, Any], threshold_years: int = 5) -> int:
+    """
+    Estimates total professional experience from duration strings in the candidate profile.
+    Returns page_limit=2 if total experience >= threshold_years, else page_limit=1.
+    """
+    experiences = profile.get("professional_experience", [])
+    total_months = 0
+    now = datetime.now()
+
+    month_abbr = {
+        "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
+        "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
+    }
+
+    def _parse_date(s: str):
+        s = s.strip().lower()
+        if s in ("present", "current", "now", "ongoing", "till date", "to date"):
+            return now
+        m = re.match(r"([a-z]+)[\s.\-]+(\d{4})", s)
+        if m:
+            month = month_abbr.get(m.group(1)[:3])
+            if month:
+                return datetime(int(m.group(2)), month, 1)
+        m = re.match(r"^(\d{4})$", s.strip())
+        if m:
+            return datetime(int(m.group(1)), 6, 1)  # assume mid-year
+        return None
+
+    for exp in experiences:
+        duration = (exp.get("duration") or "").strip()
+        if not duration:
+            continue
+        # Split on common range separators: –, —, -, or " to "
+        parts = re.split(r"\s*[–—]\s*|\s+to\s+|\s*-\s*", duration, maxsplit=1)
+        if len(parts) == 2:
+            start = _parse_date(parts[0])
+            end = _parse_date(parts[1])
+            if start and end and end >= start:
+                months = (end.year - start.year) * 12 + (end.month - start.month)
+                total_months += months
+
+    total_years = total_months / 12
+    page_limit = 2 if total_years >= threshold_years else 1
+    print(f"[PAGE BUDGET] Detected {total_years:.1f} years of experience -> page_limit={page_limit}")
+    return page_limit
+
+
 def human_input_node(state: RecruiterGraphState) -> Dict[str, Any]:
     """
     This node serves as the compilation anchor for our breakpoint.
@@ -124,6 +173,9 @@ def resume_rewriter_node(state: RecruiterGraphState) -> Dict[str, Any]:
         elif "linkedin" in q.lower():
             candidate_profile["linkedin_handle"] = ans_clean
 
+    # Calculate dynamic page limit based on total professional experience (5-year threshold)
+    page_limit = _calculate_page_limit(candidate_profile)
+
     # ── Modern template: HTML → WeasyPrint PDF ────────────────────────────────
     if template == "modern":
         from backend.templates.modern import execute_resume_rewrite_modern
@@ -133,6 +185,7 @@ def resume_rewriter_node(state: RecruiterGraphState) -> Dict[str, Any]:
             gap_report=state["gap_analysis_report"],
             user_answers=state["user_answers"],
             output_pdf_path=pdf_filename,
+            page_limit=page_limit,
         )
         return {"final_latex_source": content}
 
@@ -141,7 +194,8 @@ def resume_rewriter_node(state: RecruiterGraphState) -> Dict[str, Any]:
         original_profile=candidate_profile,
         job_spec=state["job_specifications"],
         gap_report=state["gap_analysis_report"],
-        user_answers=state["user_answers"]
+        user_answers=state["user_answers"],
+        page_limit=page_limit
     )
 
     tex_filename = os.path.join(resume_dir, "tailored_resume.tex")
