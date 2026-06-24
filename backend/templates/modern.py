@@ -130,7 +130,7 @@ Return ONLY this JSON structure (all keys required):
 
 {
   "current_role_title": "<most recent role title or student designation, e.g. 'Management Lead'>",
-  "summary": "<exactly 2 sentences, see RULE 1 below>",
+  "summary": "<2-3 sentences, see RULE 1 below>",
   "skills": [
     {"category": "<Category Name>", "items": ["<Skill1>", "<Skill2>", ...]},
     ...
@@ -168,25 +168,27 @@ Return ONLY this JSON structure (all keys required):
 CONTENT RULES
 =======================================================================
 
-RULE 1 — SUMMARY (2 specific sentences):
-  Sentence 1: [Role identity] with [current role/experience/academic] experience in [core domain], \
-specializing in [2-3 top technical areas the candidate genuinely has].
-  Sentence 2: Proven ability to [key capability from experience/projects], with hands-on exposure to \
-[1-2 specific tools from the job spec that appear in the candidate's profile or user answers].
-  IMPORTANT: If the candidate's original resume/profile explicitly mentions their years of experience (e.g. "3+ years") or important industry domains (e.g. "for one of the biggest NBFC companies"), you MUST preserve these details in your summary. Otherwise, do NOT state years of professional experience and use terms like "hands-on academic experience" instead. Do NOT fabricate years of experience.
+RULE 1 — SUMMARY (2-3 sentences, highly tailored to the target job description):
+  Create a highly compelling, custom professional summary that immediately frames the candidate as the ideal fit for the target job.
+  Guidelines:
+  - Address Target Value Proposition: Directly connect the candidate's background to the core themes and critical keywords of the target job description (e.g., if the job emphasizes "data governance, product thinking, or AI/ML enablement", align their experience with these areas).
+  - Position Identity & Seniority: Frame the candidate's role title and identity to match the scope and expectations of the target position (e.g. a Data Architect applying for a VP Lead role can be positioned as a "Senior Data Architect & Engineering Lead" or "Data Lead specializing in governance...").
+  - Preserve Original Highlights: If their original resume/profile explicitly mentions their years of experience (e.g. "3+ years", "16+ years") or important industry domains (e.g. "for one of the biggest NBFC companies"), you MUST preserve these details in your summary.
+  - Keep it Truthful: Do NOT fabricate experiences or technical tools they do not possess, but frame what they *do* possess using the vocabulary of the target job description.
 
 RULE 2 — SKILLS (4-5 categories):
   Pull skills ONLY from core_technical_skills AND skills the candidate confirmed in their answers.
   DO NOT include any skill not present in the candidate profile or user answers.
 
 RULE 3 — EXPERIENCE (1-2 most recent entries):
-  3-5 bullets per entry. Do NOT arbitrarily truncate or delete bullets if the candidate has them in their original profile; preserve their detailed achievements (up to 5 bullets per role) so the page is fully and professionally utilized. Each bullet: action-verb first, under 20 words.
-  Weave in required job skills ONLY where the candidate genuinely has exposure.
+  Use 3-5 bullets per entry. Do NOT arbitrarily truncate or delete bullets if the candidate has them in their original profile; preserve their detailed achievements (up to 5 bullets per role) so the page is fully and professionally utilized. Each bullet: action-verb first, under 20 words.
+  Weave in required job skills and keywords from the job description (e.g., "data lineage", "metadata", "governance control", "ML data pipelines", "streaming/asynchronous ingestion") ONLY where the candidate has genuine technical exposure. Frame their real work using the target job's vocabulary.
 
 RULE 4 — PROJECTS (2-3 most relevant):
-  Select projects with highest overlap to target job required skills.
-  2-3 bullets per project. Action-verb first, under 20 words.
-  DO NOT fabricate metrics, percentages, or counts not in the source data.
+  Select projects with the HIGHEST overlap to the target job's required skills. Omit unrelated ones.
+  Use 2-3 bullets per project. Each bullet under 20 words, action-verb first.
+  Actively map and frame the project details using the target job's vocabulary (e.g. data quality rules as "data quality framework", data indexing as "training feature datasets" where technically accurate).
+  DO NOT fabricate metrics, percentages, or counts not in the source data. Describe impact qualitatively instead (e.g., "enabling fast semantic retrieval", "streamlining knowledge access") when metrics are not present in source data.
 
 RULE 5 — EDUCATION: List ALL entries from the profile. Include CGPA or percentage if present.
 

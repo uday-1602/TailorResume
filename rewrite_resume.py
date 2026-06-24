@@ -87,7 +87,7 @@ def execute_resume_rewrite(original_profile: Dict[str, Any], job_spec: Dict[str,
         "\\vspace{-2mm}"
     )
 
-    sys_instruction = f"""You are an expert technical resume writer specializing in AI/ML engineering roles. \
+    sys_instruction = f"""You are an expert technical resume writer specializing in AI/ML engineering roles.
 Your task is to generate a COMPLETE, COMPILABLE, single-page LaTeX resume for the candidate using the provided data.
 
 =====================================================================
@@ -107,13 +107,13 @@ MANDATORY PREAMBLE (copy verbatim, then continue from \\section*{{Professional S
 PART 2 — CONTENT RULES
 =====================================================================
 
-RULE 1 — PROFESSIONAL SUMMARY (2 sentences, not generic):
-  Write using this formula:
-    Sentence 1: [Role identity] with [current role / experience / academic] experience in [core domain], specializing in [2-3 top technical areas from the job spec that the candidate genuinely has].
-    Sentence 2: Proven ability to [key capability from experience highlights or projects], with hands-on exposure to [1-2 specific tools from job spec found in their profile or user answers].
-  IMPORTANT:
-    - Be specific to this candidate and this job. Do NOT write generic filler.
-    - Check the candidate's actual graduation date and experience duration. If their original profile/resume explicitly mentions their years of experience (e.g. "3+ years") or important industry domains (e.g. "for one of the biggest NBFC companies"), you MUST preserve these details in your summary. Otherwise, describe their experience level accurately using terms like "hands-on internship and academic experience" or their actual roles. Do NOT fabricate years of experience not supported by the data.
+RULE 1 — PROFESSIONAL SUMMARY (2-3 sentences, highly tailored to the target job description):
+  Create a highly compelling, custom professional summary that immediately frames the candidate as the ideal fit for the target job.
+  Guidelines:
+  - Address Target Value Proposition: Directly connect the candidate's background to the core themes and critical keywords of the target job description (e.g., if the job emphasizes "data governance, product thinking, or AI/ML enablement", align their experience with these areas).
+  - Position Identity & Seniority: Frame the candidate's role title and identity to match the scope and expectations of the target position (e.g. a Data Architect applying for a VP Lead role can be positioned as a "Senior Data Architect & Engineering Lead" or "Data Lead specializing in governance...").
+  - Preserve Original Highlights: If their original resume/profile explicitly mentions their years of experience (e.g. "3+ years", "16+ years") or important industry domains (e.g. "for one of the biggest NBFC companies"), you MUST preserve these details in your summary.
+  - Keep it Truthful: Do NOT fabricate experiences or technical tools they do not possess, but frame what they *do* possess using the vocabulary of the target job description.
   End the summary block with a single \\ (not \\\\).
 
 RULE 2 — TECHNICAL SKILLS:
@@ -131,7 +131,7 @@ RULE 3 — EXPERIENCE (1 to 2 experience entries, most recent first):
       \\item bullet
     \\end{{itemize}}
   Use 3-5 bullets per entry. Do NOT arbitrarily truncate or delete bullets if the candidate has them in their original profile; preserve their detailed achievements (up to 5 bullets per role) so the page is fully and professionally utilized. Each bullet must be under 20 words, action-verb first.
-  Weave in required job skills ONLY where the candidate genuinely has exposure based on their highlights or user answers. Do NOT include skills that the candidate lacks.
+  Weave in required job skills and keywords from the job description (e.g., "data lineage", "metadata", "governance control", "ML data pipelines", "streaming/asynchronous ingestion") ONLY where the candidate has genuine technical exposure. Frame their real work using the target job's vocabulary.
 
 RULE 4 — PROJECTS (2 to 3 entries, most relevant first):
   Select projects with the HIGHEST overlap to the target job's required skills. Omit unrelated ones.
@@ -142,6 +142,7 @@ RULE 4 — PROJECTS (2 to 3 entries, most relevant first):
       \\item bullet
     \\end{{itemize}}
   Use 2-3 bullets per project. Each bullet under 20 words, action-verb first.
+  Actively map and frame the project details using the target job's vocabulary (e.g. data quality rules as "data quality framework", data indexing as "training feature datasets" where technically accurate).
   DO NOT fabricate metrics, percentages, star counts, or document volumes not present in the source data. Describe impact qualitatively instead (e.g., "enabling fast semantic retrieval", "streamlining knowledge access").
 
 RULE 5 — CERTIFICATIONS:
