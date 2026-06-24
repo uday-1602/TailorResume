@@ -106,8 +106,20 @@ def job_extraction(url: Optional[str] = None, fallback_file: str = "job_descript
         
     truncated_text = raw_job_text[:12000]
 
-    print(f"[2/3] Initializing AI model with strict structured output mapping...")
-    # Map custom AWS env vars to standard boto3/botocore vars
+    print(f"[2/3] Initializing AI models (Groq primary, Bedrock fallback)...")
+    # 1. Initialize Groq (Primary)
+    groq_structured = None
+    try:
+        groq_llm = init_chat_model(
+            model="llama-3.3-70b-versatile",
+            model_provider="groq",
+            temperature=0
+        )
+        groq_structured = groq_llm.with_structured_output(JobSpecificationSchema)
+    except Exception as e:
+        print(f"[LLM WARNING] Groq initialization failed: {e}")
+
+    # 2. Initialize Bedrock (Fallback)
     if os.getenv("AWS_ACCESS_KEY") and not os.getenv("AWS_ACCESS_KEY_ID"):
         os.environ["AWS_ACCESS_KEY_ID"] = os.getenv("AWS_ACCESS_KEY")
     if os.getenv("AWS_SECRET_KEY") and not os.getenv("AWS_SECRET_ACCESS_KEY"):
@@ -116,15 +128,14 @@ def job_extraction(url: Optional[str] = None, fallback_file: str = "job_descript
     model_id = os.getenv("MODEL_ID", "us.anthropic.claude-haiku-4-5-20251001-v1:0")
     region = os.getenv("AWS_REGION", "us-east-1")
 
-    llm = init_chat_model(
+    bedrock_llm = init_chat_model(
         model=model_id,
         model_provider="bedrock",
         temperature=0,
         max_tokens=4096,
         region_name=region
     )
-    
-    structured_llm = llm.with_structured_output(JobSpecificationSchema)
+    bedrock_structured = bedrock_llm.with_structured_output(JobSpecificationSchema)
 
     sys_instruction = (
         "You are an elite enterprise technical sourcing engine. Analyze the provided text of a job posting.\n\n"
@@ -134,14 +145,24 @@ def job_extraction(url: Optional[str] = None, fallback_file: str = "job_descript
         "cleanly into separate, searchable strings to prepare for a semantic matrix matching process."
     )
 
-    print("[3/3] Sending payload to model and applying Pydantic constraints...")
+    print("[3/3] Sending payload to model...")
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def _invoke_with_retry():
-        return structured_llm.invoke([
-            ("system", sys_instruction),
-            ("user", f"Raw Scraped Job Content:\n\n{truncated_text}")
-        ])
+        try:
+            if groq_structured is None:
+                raise ValueError("Groq is not initialized.")
+            print("[LLM] Invoking Groq (llama-3.3-70b-versatile)...")
+            return groq_structured.invoke([
+                ("system", sys_instruction),
+                ("user", f"Raw Scraped Job Content:\n\n{truncated_text}")
+            ])
+        except Exception as e:
+            print(f"[LLM WARNING] Groq execution failed: {e}. Falling back to AWS Bedrock...")
+            return bedrock_structured.invoke([
+                ("system", sys_instruction),
+                ("user", f"Raw Scraped Job Content:\n\n{truncated_text}")
+            ])
 
     response = _invoke_with_retry()
     return response.model_dump()
