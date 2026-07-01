@@ -1,0 +1,395 @@
+{
+  "communities": {
+    "0": [
+      "analyze_gap_gap_analysis",
+      "analyze_gap_rationale_29",
+      "any",
+      "interactive_agent",
+      "interactive_agent_generate_targeted_interview_questions",
+      "interactive_agent_rationale_18",
+      "interactive_agent_technicalinterviewquestions",
+      "parse_profile_profile_extraction",
+      "parse_profile_rationale_59",
+      "recruitement_graph",
+      "recruitement_graph_calculate_page_limit",
+      "recruitement_graph_gap_analyzer_node",
+      "recruitement_graph_human_input_node",
+      "recruitement_graph_interviewer_node",
+      "recruitement_graph_job_scraper_node",
+      "recruitement_graph_profile_analyzer_node",
+      "recruitement_graph_rationale_140",
+      "recruitement_graph_rationale_22",
+      "recruitement_graph_rationale_93",
+      "recruitement_graph_recruitergraphstate",
+      "recruitement_graph_resume_rewriter_node",
+      "rewrite_resume",
+      "rewrite_resume_execute_resume_rewrite",
+      "rewrite_resume_fix_latex",
+      "rewrite_resume_flush_skills",
+      "rewrite_resume_rationale_18",
+      "rewrite_resume_rationale_318",
+      "rewrite_resume_rationale_407",
+      "scrape_job",
+      "scrape_job_job_extraction",
+      "scrape_job_rationale_24",
+      "scrape_job_rationale_72",
+      "scrape_job_scrape_raw_html_from_url",
+      "typeddict"
+    ],
+    "1": [
+      "app_page",
+      "app_page_home",
+      "app_page_initial_nodes",
+      "app_page_step",
+      "app_page_step_labels",
+      "app_page_steps",
+      "components_chatbotpopup",
+      "components_chatbotpopup_chatbotpopup",
+      "components_chatbotpopup_chatbotpopupprops",
+      "components_chatbotpopup_message",
+      "steps_processingstep",
+      "steps_processingstep_node_labels",
+      "steps_processingstep_nodeicon",
+      "steps_processingstep_nodestatus",
+      "steps_processingstep_pipelinenode",
+      "steps_processingstep_processingstep",
+      "steps_processingstep_processingstepprops",
+      "steps_resultstep",
+      "steps_resultstep_pdfcanvasviewer",
+      "steps_resultstep_resultstep",
+      "steps_resultstep_resultstepprops",
+      "steps_resultstep_window",
+      "steps_templatestep",
+      "steps_templatestep_defaultpreview",
+      "steps_templatestep_lockedpreview",
+      "steps_templatestep_modernpreview",
+      "steps_templatestep_templatestep",
+      "steps_templatestep_templatestepprops",
+      "steps_uploadstep",
+      "steps_uploadstep_uploadstep",
+      "steps_uploadstep_uploadstepprops"
+    ],
+    "2": [
+      "lib_utils",
+      "lib_utils_cn",
+      "ui_button",
+      "ui_button_button",
+      "ui_button_buttonprops",
+      "ui_button_buttonvariants",
+      "ui_card",
+      "ui_card_card",
+      "ui_card_cardcontent",
+      "ui_card_carddescription",
+      "ui_card_cardfooter",
+      "ui_card_cardheader",
+      "ui_card_cardtitle",
+      "ui_file_upload",
+      "ui_file_upload_fileupload",
+      "ui_file_upload_fileuploadprops",
+      "ui_input",
+      "ui_input_input",
+      "ui_input_inputprops",
+      "ui_job_input",
+      "ui_job_input_jobinput",
+      "ui_job_input_jobinputprops",
+      "ui_label",
+      "ui_label_label",
+      "ui_label_labelvariants",
+      "ui_tabs",
+      "ui_tabs_tabscontent",
+      "ui_tabs_tabslist",
+      "ui_tabs_tabstrigger"
+    ],
+    "3": [
+      "backend_main",
+      "backend_main_answerspayload",
+      "backend_main_download_pdf",
+      "backend_main_health",
+      "backend_main_jobrecord",
+      "backend_main_jobrecord_init",
+      "backend_main_jobrecord_push_event",
+      "backend_main_node_not_yet_reported",
+      "backend_main_rationale_1",
+      "backend_main_rationale_206",
+      "backend_main_rationale_229",
+      "backend_main_rationale_275",
+      "backend_main_rationale_316",
+      "backend_main_rationale_330",
+      "backend_main_run_pipeline",
+      "backend_main_stream_status",
+      "backend_main_submit_answers",
+      "backend_s3_storage",
+      "backend_s3_storage_s3storage",
+      "backend_s3_storage_s3storage_generate_presigned_url",
+      "backend_s3_storage_s3storage_init",
+      "backend_s3_storage_s3storage_upload_file",
+      "backgroundtasks",
+      "uploadfile"
+    ],
+    "4": [
+      "frontend_tsconfig",
+      "frontend_tsconfig_compileroptions",
+      "frontend_tsconfig_compileroptions_allowjs",
+      "frontend_tsconfig_compileroptions_esmoduleinterop",
+      "frontend_tsconfig_compileroptions_incremental",
+      "frontend_tsconfig_compileroptions_isolatedmodules",
+      "frontend_tsconfig_compileroptions_jsx",
+      "frontend_tsconfig_compileroptions_lib",
+      "frontend_tsconfig_compileroptions_module",
+      "frontend_tsconfig_compileroptions_moduleresolution",
+      "frontend_tsconfig_compileroptions_noemit",
+      "frontend_tsconfig_compileroptions_paths",
+      "frontend_tsconfig_compileroptions_plugins",
+      "frontend_tsconfig_compileroptions_resolvejsonmodule",
+      "frontend_tsconfig_compileroptions_skiplibcheck",
+      "frontend_tsconfig_compileroptions_strict",
+      "frontend_tsconfig_compileroptions_target",
+      "frontend_tsconfig_exclude",
+      "frontend_tsconfig_include",
+      "frontend_tsconfig_paths"
+    ],
+    "5": [
+      "frontend_package",
+      "frontend_package_devdependencies",
+      "frontend_package_devdependencies_eslint",
+      "frontend_package_devdependencies_eslint_config_next",
+      "frontend_package_devdependencies_tailwindcss",
+      "frontend_package_devdependencies_tailwindcss_postcss",
+      "frontend_package_devdependencies_types_node",
+      "frontend_package_devdependencies_types_react",
+      "frontend_package_devdependencies_types_react_dom",
+      "frontend_package_devdependencies_typescript",
+      "frontend_package_name",
+      "frontend_package_private",
+      "frontend_package_scripts",
+      "frontend_package_scripts_build",
+      "frontend_package_scripts_dev",
+      "frontend_package_scripts_lint",
+      "frontend_package_scripts_start",
+      "frontend_package_version"
+    ],
+    "6": [
+      "frontend_package_dependencies",
+      "frontend_package_dependencies_class_variance_authority",
+      "frontend_package_dependencies_clsx",
+      "frontend_package_dependencies_framer_motion",
+      "frontend_package_dependencies_lucide_react",
+      "frontend_package_dependencies_next",
+      "frontend_package_dependencies_radix_ui_react_dialog",
+      "frontend_package_dependencies_radix_ui_react_label",
+      "frontend_package_dependencies_radix_ui_react_select",
+      "frontend_package_dependencies_radix_ui_react_separator",
+      "frontend_package_dependencies_radix_ui_react_slot",
+      "frontend_package_dependencies_radix_ui_react_tabs",
+      "frontend_package_dependencies_radix_ui_react_tooltip",
+      "frontend_package_dependencies_react",
+      "frontend_package_dependencies_react_dom",
+      "frontend_package_dependencies_sonner",
+      "frontend_package_dependencies_tailwind_merge"
+    ],
+    "7": [
+      "templates_modern",
+      "templates_modern_build_html",
+      "templates_modern_build_page_html",
+      "templates_modern_esc",
+      "templates_modern_execute_resume_rewrite_modern",
+      "templates_modern_generate_resume_json",
+      "templates_modern_html_to_pdf",
+      "templates_modern_rationale_1",
+      "templates_modern_rationale_105",
+      "templates_modern_rationale_277",
+      "templates_modern_rationale_288",
+      "templates_modern_rationale_41",
+      "templates_modern_rationale_72",
+      "templates_modern_rationale_871"
+    ],
+    "8": [
+      "analyze_gap",
+      "analyze_gap_gapanalysisreportschema",
+      "analyze_gap_skillmatchschema",
+      "analyze_gap_technicalgapschema",
+      "basemodel",
+      "parse_profile",
+      "parse_profile_candidateprofileschema",
+      "parse_profile_educationdetail",
+      "parse_profile_experienceschema",
+      "parse_profile_extract_text_from_pdf",
+      "parse_profile_projectschema",
+      "parse_profile_rationale_44",
+      "scrape_job_jobspecificationschema"
+    ],
+    "9": [
+      "tailored_resume_aws_bedrock",
+      "tailored_resume_carai",
+      "tailored_resume_movie_rec",
+      "tailored_resume_nihilent",
+      "tailored_resume_rag",
+      "tailored_resume_uday_salathia"
+    ],
+    "10": [
+      "agents_nextjs_rules",
+      "claude_config",
+      "readme_nextjs_project"
+    ],
+    "11": [
+      "app_layout",
+      "app_layout_metadata",
+      "app_layout_rootlayout"
+    ],
+    "12": [
+      "compile_pdf",
+      "compile_pdf_compile_tex"
+    ],
+    "13": [
+      "frontend_eslint_config",
+      "frontend_eslint_config_eslintconfig"
+    ],
+    "14": [
+      "frontend_next_config",
+      "frontend_next_config_nextconfig"
+    ],
+    "15": [
+      "frontend_postcss_config",
+      "frontend_postcss_config_config"
+    ],
+    "16": [
+      "frontend_next_env_d"
+    ],
+    "17": [
+      "templates_init"
+    ]
+  },
+  "cohesion": {
+    "0": 0.11051693404634581,
+    "1": 0.07741935483870968,
+    "2": 0.11083743842364532,
+    "3": 0.10144927536231885,
+    "4": 0.1,
+    "5": 0.1111111111111111,
+    "6": 0.11764705882352941,
+    "7": 0.1978021978021978,
+    "8": 0.21794871794871795,
+    "9": 0.4,
+    "10": 0.6666666666666666,
+    "11": 0.6666666666666666,
+    "12": 1.0,
+    "13": 1.0,
+    "14": 1.0,
+    "15": 1.0,
+    "16": 1.0,
+    "17": 1.0
+  },
+  "gods": [
+    {
+      "id": "frontend_tsconfig_compileroptions",
+      "label": "compilerOptions",
+      "degree": 16
+    },
+    {
+      "id": "recruitement_graph_recruitergraphstate",
+      "label": "RecruiterGraphState",
+      "degree": 12
+    },
+    {
+      "id": "lib_utils_cn",
+      "label": "cn()",
+      "degree": 10
+    },
+    {
+      "id": "templates_modern_execute_resume_rewrite_modern",
+      "label": "execute_resume_rewrite_modern()",
+      "degree": 8
+    },
+    {
+      "id": "backend_main_run_pipeline",
+      "label": "_run_pipeline()",
+      "degree": 7
+    },
+    {
+      "id": "backend_main_jobrecord",
+      "label": "JobRecord",
+      "degree": 6
+    },
+    {
+      "id": "templates_modern_build_html",
+      "label": "_build_html()",
+      "degree": 6
+    },
+    {
+      "id": "parse_profile_profile_extraction",
+      "label": "profile_extraction()",
+      "degree": 6
+    },
+    {
+      "id": "recruitement_graph_resume_rewriter_node",
+      "label": "resume_rewriter_node()",
+      "degree": 6
+    },
+    {
+      "id": "rewrite_resume_execute_resume_rewrite",
+      "label": "execute_resume_rewrite()",
+      "degree": 6
+    }
+  ],
+  "surprises": [
+    {
+      "source": "JobRecord",
+      "target": "RecruiterGraphState",
+      "source_files": [
+        "backend/main.py",
+        "recruitement_graph.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "uses",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities"
+    },
+    {
+      "source": "AnswersPayload",
+      "target": "RecruiterGraphState",
+      "source_files": [
+        "backend/main.py",
+        "recruitement_graph.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "uses",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities"
+    },
+    {
+      "source": "resume_rewriter_node()",
+      "target": "execute_resume_rewrite_modern()",
+      "source_files": [
+        "recruitement_graph.py",
+        "backend/templates/modern.py"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "connects across different repos/directories; bridges separate communities"
+    },
+    {
+      "source": "gap_analyzer_node()",
+      "target": "gap_analysis()",
+      "source_files": [
+        "recruitement_graph.py",
+        "analyze_gap.py"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "connects across different repos/directories"
+    },
+    {
+      "source": "interviewer_node()",
+      "target": "generate_targeted_interview_questions()",
+      "source_files": [
+        "recruitement_graph.py",
+        "interactive_agent.py"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "connects across different repos/directories"
+    }
+  ],
+  "tokens": {
+    "input": 5332,
+    "output": 1893
+  }
+}
