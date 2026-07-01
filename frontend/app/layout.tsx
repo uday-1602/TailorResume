@@ -2,15 +2,88 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "TailorResume — AI-Powered Resume Tailoring",
+  title: "TailorResume — AI Resume Maker & Resume Updater to JD",
   description:
-    "Upload your resume and a job description. Our LangGraph AI pipeline rewrites your resume to pass ATS filters and impress hiring managers.",
-  keywords: ["resume", "AI", "ATS", "job application", "tailor resume"],
+    "TailorResume is the ultimate AI resume maker and updater. Upload your resume and job description (JD) to rewrite, optimize, and tailor your resume for ATS systems in seconds.",
+  keywords: [
+    "resume maker",
+    "resume updater",
+    "resume updater to a jd",
+    "tailor resume to jd",
+    "AI resume builder",
+    "ATS resume optimizer",
+    "AI resume tailoring",
+    "resume rewriter",
+    "job description resume aligner"
+  ],
+  authors: [{ name: "TailorResume Team" }],
+  creator: "TailorResume",
+  metadataBase: new URL("https://tailorresume.ai"),
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: "TailorResume — AI Resume Maker & Resume Updater to JD",
+    description:
+      "Align your resume with any job description in seconds using our advanced AI-powered pipeline. Stop getting filtered out by ATS.",
+    url: "https://tailorresume.ai",
+    siteName: "TailorResume",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "TailorResume — AI Resume Maker & Resume Updater to JD",
+    description:
+      "Transform your resume to match job descriptions using advanced AI tailoring.",
+  },
 };
 
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://tailorresume.ai/#website",
+        "url": "https://tailorresume.ai",
+        "name": "TailorResume",
+        "description": "AI Resume Maker & Resume Updater to JD",
+        "publisher": {
+          "@type": "Organization",
+          "name": "TailorResume",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://tailorresume.ai/favicon.ico"
+          }
+        }
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": "https://tailorresume.ai/#software",
+        "name": "TailorResume",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "All",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "description": "An AI-powered resume maker and updater that tailors resumes to specific job descriptions (JDs) using dynamic gap analysis and ATS optimization pipelines.",
+        "browserRequirements": "Requires HTML5 compatible browser",
+        "featureList": [
+          "AI Resume Rewriting",
+          "Job Description Scraper",
+          "ATS Compliance Check",
+          "Resume-to-JD Gap Analysis",
+          "LaTeX Resume Compiling"
+        ]
+      }
+    ]
+  };
+
   return (
     <html lang="en" className="dark">
       <head>
@@ -29,6 +102,10 @@ export default function RootLayout({
         <link
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
           rel="stylesheet"
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
       <body className="film-grain">{children}</body>
