@@ -21,14 +21,14 @@ export default function BlogPost() {
     "@graph": [
       {
         "@type": "Article",
-        "@id": "https://tailorresume.ai/blog/how-to-update-resume-to-jd-with-ai#article",
+        "@id": "https://tailor-resume-xi.vercel.app/blog/how-to-update-resume-to-jd-with-ai#article",
         "isPartOf": {
-          "@id": "https://tailorresume.ai/#website"
+          "@id": "https://tailor-resume-xi.vercel.app/#website"
         },
         "headline": "How to Update Your Resume to a JD (Job Description) with AI",
         "description": "A comprehensive guide on how to automatically tailor your resume to any job description using advanced AI resume updaters and makers to maximize your match rate and pass ATS filters.",
         "inLanguage": "en-US",
-        "mainEntityOfPage": "https://tailorresume.ai/blog/how-to-update-resume-to-jd-with-ai",
+        "mainEntityOfPage": "https://tailor-resume-xi.vercel.app/blog/how-to-update-resume-to-jd-with-ai",
         "datePublished": "2026-07-01T12:00:00+00:00",
         "dateModified": "2026-07-01T12:00:00+00:00",
         "author": {
@@ -40,13 +40,13 @@ export default function BlogPost() {
           "name": "TailorResume",
           "logo": {
             "@type": "ImageObject",
-            "url": "https://tailorresume.ai/favicon.ico"
+            "url": "https://tailor-resume-xi.vercel.app/favicon.ico"
           }
         }
       },
       {
         "@type": "FAQPage",
-        "@id": "https://tailorresume.ai/blog/how-to-update-resume-to-jd-with-ai#faq",
+        "@id": "https://tailor-resume-xi.vercel.app/blog/how-to-update-resume-to-jd-with-ai#faq",
         "mainEntity": [
           {
             "@type": "Question",

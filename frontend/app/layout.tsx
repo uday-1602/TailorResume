@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "TailorResume Team" }],
   creator: "TailorResume",
-  metadataBase: new URL("https://tailorresume.ai"),
+  metadataBase: new URL("https://tailor-resume-xi.vercel.app"),
   alternates: {
     canonical: "/",
   },
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     title: "TailorResume — AI Resume Maker & Resume Updater to JD",
     description:
       "Align your resume with any job description in seconds using our advanced AI-powered pipeline. Stop getting filtered out by ATS.",
-    url: "https://tailorresume.ai",
+    url: "https://tailor-resume-xi.vercel.app",
     siteName: "TailorResume",
     locale: "en_US",
     type: "website",
@@ -53,8 +53,8 @@ export default function RootLayout({
     "@graph": [
       {
         "@type": "WebSite",
-        "@id": "https://tailorresume.ai/#website",
-        "url": "https://tailorresume.ai",
+        "@id": "https://tailor-resume-xi.vercel.app/#website",
+        "url": "https://tailor-resume-xi.vercel.app",
         "name": "TailorResume",
         "description": "AI Resume Maker & Resume Updater to JD",
         "publisher": {
@@ -62,13 +62,13 @@ export default function RootLayout({
           "name": "TailorResume",
           "logo": {
             "@type": "ImageObject",
-            "url": "https://tailorresume.ai/favicon.ico"
+            "url": "https://tailor-resume-xi.vercel.app/favicon.ico"
           }
         }
       },
       {
         "@type": "SoftwareApplication",
-        "@id": "https://tailorresume.ai/#software",
+        "@id": "https://tailor-resume-xi.vercel.app/#software",
         "name": "TailorResume",
         "applicationCategory": "BusinessApplication",
         "operatingSystem": "All",
