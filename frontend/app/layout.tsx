@@ -37,6 +37,12 @@ export const metadata: Metadata = {
     description:
       "Transform your resume to match job descriptions using advanced AI tailoring.",
   },
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || "google_verification_placeholder_code",
+    other: {
+      "msvalidate.01": process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION || "bing_verification_placeholder_code",
+    },
+  },
 };
 
 export default function RootLayout({
